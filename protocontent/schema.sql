@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS spaces (
   label       TEXT,
   index_token TEXT,
   blocked     INTEGER DEFAULT 0,
+  public_index INTEGER DEFAULT 0,
   created_at  INTEGER
 );
 

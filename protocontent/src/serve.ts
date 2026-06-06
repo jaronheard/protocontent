@@ -95,7 +95,7 @@ export async function handleContent(
   // tokens existed have a null token and stay open (legacy) until republished.
   const isIndexSurface =
     path === "/" || path === "" || path === "/__list" || path === "/__live";
-  if (isIndexSurface && space.index_token && k !== space.index_token) {
+  if (isIndexSurface && space.index_token && !space.public_index && k !== space.index_token) {
     return notFound();
   }
 

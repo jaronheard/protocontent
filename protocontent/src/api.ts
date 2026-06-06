@@ -19,6 +19,7 @@ import {
   setSpaceBlocked,
   insertReport,
   listProjectSpaces,
+  setSpacePublicIndex,
 } from "./db";
 import { json, errorJson, slugify, genSpaceId } from "./util";
 import { DASHBOARD_HTML } from "./dashboard";
@@ -164,6 +165,9 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
       // 3. GET /v1/spaces/:spaceId/list
       if (rest === "/list" && request.method === "GET") {
         return await handleList(request, env, spaceId);
+      }
+      if (rest === "/public" && request.method === "POST") {
+        return await handleSetPublic(request, env, spaceId);
       }
 
       // /v1/spaces/:spaceId/artifacts/:name/...
@@ -325,6 +329,15 @@ async function handleProjectSpaces(request: Request, env: Env): Promise<Response
     createdAt: s.created_at,
   }));
   return json({ spaces });
+}
+
+async function handleSetPublic(request: Request, env: Env, spaceId: string): Promise<Response> {
+  const { projectId } = await requireProject(request, env);
+  await requireOwnedSpace(env, spaceId, projectId);
+  const body = (await request.json().catch(() => null)) as { public?: boolean } | null;
+  const pub = body?.public !== false; // default: make the index public
+  await setSpacePublicIndex(env, spaceId, pub);
+  return json({ ok: true, spaceId, publicIndex: pub });
 }
 
 async function handleAuthGithub(request: Request, env: Env): Promise<Response> {
