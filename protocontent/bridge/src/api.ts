@@ -38,6 +38,8 @@ export interface ListArtifact {
 
 export interface ListResponse {
   artifacts: ListArtifact[];
+  /** Tokenized private URL of the session index page (carries ?k=). */
+  spaceUrl?: string;
 }
 
 export interface HistoryVersion {

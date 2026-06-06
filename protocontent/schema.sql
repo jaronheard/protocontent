@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS spaces (
   id          TEXT PRIMARY KEY,
   project_id  TEXT,
   label       TEXT,
+  index_token TEXT,
   created_at  INTEGER
 );
 

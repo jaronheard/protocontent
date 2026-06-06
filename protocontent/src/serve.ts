@@ -74,6 +74,22 @@ export async function handleContent(
 ): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
+  const k = url.searchParams.get("k");
+
+  // The space must exist for every route.
+  const space = await getSpace(env, spaceId);
+  if (!space) return notFound();
+
+  // Index surfaces (the session page + its data + live feed) are PRIVATE: they
+  // require the space's index token (?k=). Sharing a single artifact link must
+  // not expose the whole thread. Individual artifacts (/:name) stay open — the
+  // unguessable subdomain is their capability. Spaces created before index
+  // tokens existed have a null token and stay open (legacy) until republished.
+  const isIndexSurface =
+    path === "/" || path === "" || path === "/__list" || path === "/__live";
+  if (isIndexSurface && space.index_token && k !== space.index_token) {
+    return notFound();
+  }
 
   // --- Live WebSocket: route to the Space Durable Object. ---
   if (path === "/__live") {
@@ -81,10 +97,6 @@ export async function handleContent(
     const stub = env.SPACE.get(id);
     return stub.fetch(new Request("https://do/__live", request));
   }
-
-  // For everything else the space must exist.
-  const space = await getSpace(env, spaceId);
-  if (!space) return notFound();
 
   // --- JSON artifact list for the index page. ---
   if (path === "/__list") {

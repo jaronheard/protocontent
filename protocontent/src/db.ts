@@ -62,7 +62,7 @@ export async function projectForToken(env: Env, token: string): Promise<ProjectR
 export async function getSpace(env: Env, spaceId: string): Promise<SpaceRow | null> {
   return (
     (await env.DB.prepare(
-      `SELECT id, project_id, label, created_at FROM spaces WHERE id = ?`,
+      `SELECT id, project_id, label, index_token, created_at FROM spaces WHERE id = ?`,
     )
       .bind(spaceId)
       .first<SpaceRow>()) ?? null
@@ -90,18 +90,27 @@ export async function ensureSpace(
         .run();
       existing.label = label;
     }
+    // Backfill an index token for spaces created before index tokens existed.
+    if (!existing.index_token) {
+      const indexToken = genToken(16);
+      await env.DB.prepare(`UPDATE spaces SET index_token = ? WHERE id = ?`)
+        .bind(indexToken, spaceId)
+        .run();
+      existing.index_token = indexToken;
+    }
     return existing;
   }
   const row: SpaceRow = {
     id: spaceId,
     project_id: projectId,
     label: label ?? null,
+    index_token: genToken(16),
     created_at: Date.now(),
   };
   await env.DB.prepare(
-    `INSERT INTO spaces (id, project_id, label, created_at) VALUES (?, ?, ?, ?)`,
+    `INSERT INTO spaces (id, project_id, label, index_token, created_at) VALUES (?, ?, ?, ?, ?)`,
   )
-    .bind(row.id, row.project_id, row.label, row.created_at)
+    .bind(row.id, row.project_id, row.label, row.index_token, row.created_at)
     .run();
   return row;
 }
