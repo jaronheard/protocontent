@@ -54,6 +54,11 @@
     }
   ],
 
+  // KV for coarse fixed-window rate limiting.
+  "kv_namespaces": [
+    { "binding": "RL", "id": "ec8e1ddceee04e299b40dd673336ff53" }
+  ],
+
   "durable_objects": {
     "bindings": [
       { "name": "SPACE", "class_name": "Space" },
