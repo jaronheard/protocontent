@@ -62,7 +62,7 @@ export async function projectForToken(env: Env, token: string): Promise<ProjectR
 export async function getSpace(env: Env, spaceId: string): Promise<SpaceRow | null> {
   return (
     (await env.DB.prepare(
-      `SELECT id, project_id, label, index_token, created_at FROM spaces WHERE id = ?`,
+      `SELECT id, project_id, label, index_token, blocked, created_at FROM spaces WHERE id = ?`,
     )
       .bind(spaceId)
       .first<SpaceRow>()) ?? null
@@ -105,6 +105,7 @@ export async function ensureSpace(
     project_id: projectId,
     label: label ?? null,
     index_token: genToken(16),
+    blocked: 0,
     created_at: Date.now(),
   };
   await env.DB.prepare(
@@ -125,6 +126,30 @@ export async function requireOwnedSpace(
   if (!space) throw new ApiError("space not found", 404);
   if (space.project_id !== projectId) throw new ApiError("forbidden", 403);
   return space;
+}
+
+/** Block / unblock a space (moderation kill switch). Returns false if unknown. */
+export async function setSpaceBlocked(
+  env: Env,
+  spaceId: string,
+  blocked: boolean,
+): Promise<boolean> {
+  const res = await env.DB.prepare(`UPDATE spaces SET blocked = ? WHERE id = ?`)
+    .bind(blocked ? 1 : 0, spaceId)
+    .run();
+  return (res.meta?.changes ?? 0) > 0;
+}
+
+/** Record an abuse report. */
+export async function insertReport(
+  env: Env,
+  report: { spaceId: string; url: string; reason: string; ip: string },
+): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO reports (id, space_id, url, reason, ip, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(genId(), report.spaceId, report.url, report.reason, report.ip, Date.now())
+    .run();
 }
 
 // ---------------------------------------------------------------------------

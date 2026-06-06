@@ -80,6 +80,14 @@ export async function handleContent(
   const space = await getSpace(env, spaceId);
   if (!space) return notFound();
 
+  // Moderation kill switch: a blocked space serves 410 for every route.
+  if (space.blocked) {
+    return new Response("This content has been removed.", {
+      status: 410,
+      headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": "noindex" },
+    });
+  }
+
   // Index surfaces (the session page + its data + live feed) are PRIVATE: they
   // require the space's index token (?k=). Sharing a single artifact link must
   // not expose the whole thread. Individual artifacts (/:name) stay open — the
