@@ -8,6 +8,10 @@ export interface Env {
   DB: D1Database;
   SPACE: DurableObjectNamespace<Space>;
   MCP_OBJECT: DurableObjectNamespace<ProtoMcpAgent>;
+  /** KV for coarse rate limiting (fixed-window counters). Optional. */
+  RL?: KVNamespace;
+  /** Admin token for the moderation kill switch (Wrangler secret). Optional. */
+  ADMIN_TOKEN?: string;
 }
 
 export interface ProjectRow {

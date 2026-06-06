@@ -46,6 +46,43 @@ async function requireProject(request: Request, env: Env): Promise<{ projectId: 
   return { projectId: project.id, token };
 }
 
+// --- Abuse limits ----------------------------------------------------------
+
+const MAX_FILES = 500;
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB per file
+const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50 MB per publish
+const MAX_BODY_BYTES = 72 * 1024 * 1024; // request-body ceiling (base64 inflation headroom)
+
+function clientIp(request: Request): string {
+  return request.headers.get("cf-connecting-ip") || "unknown";
+}
+
+/** Approximate decoded byte length of a base64 string. */
+function b64Bytes(b64: string): number {
+  const pad = b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0;
+  return Math.max(0, Math.floor((b64.length * 3) / 4) - pad);
+}
+
+/**
+ * Coarse fixed-window rate limit backed by KV; returns true if allowed.
+ * KV is eventually consistent so the cap is approximate — fine for abuse
+ * mitigation. No-ops (allows) when the KV binding is absent.
+ */
+async function rateLimit(
+  env: Env,
+  bucket: string,
+  limit: number,
+  windowSec: number,
+): Promise<boolean> {
+  if (!env.RL) return true;
+  const window = Math.floor(Date.now() / 1000 / windowSec);
+  const key = `rl:${bucket}:${window}`;
+  const current = parseInt((await env.RL.get(key)) || "0", 10);
+  if (current >= limit) return false;
+  await env.RL.put(key, String(current + 1), { expirationTtl: windowSec * 2 });
+  return true;
+}
+
 export async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -66,12 +103,18 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
   try {
     // 1. POST /v1/projects (no auth) -> mint anonymous project + token.
     if (path === "/v1/projects" && request.method === "POST") {
+      if (!(await rateLimit(env, `proj:${clientIp(request)}`, 30, 3600))) {
+        return errorJson("rate limit exceeded — try again later", 429);
+      }
       const { token, projectId } = await createProject(env);
       return json({ token, projectId }, 201);
     }
 
     // 2. POST /v1/publish (auth)
     if (path === "/v1/publish" && request.method === "POST") {
+      if (!(await rateLimit(env, `pub:${clientIp(request)}`, 240, 60))) {
+        return errorJson("rate limit exceeded — slow down", 429);
+      }
       return await handlePublish(request, env, ctx);
     }
 
@@ -121,11 +164,25 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
 
 async function handlePublish(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const { projectId, token } = await requireProject(request, env);
+  const contentLength = parseInt(request.headers.get("content-length") || "0", 10);
+  if (contentLength > MAX_BODY_BYTES) throw new ApiError("request body too large", 413);
   const body = (await request.json().catch(() => null)) as Partial<PublishInput> | null;
   if (!body || typeof body !== "object") throw new ApiError("invalid JSON body", 400);
   if (!body.name || typeof body.name !== "string") throw new ApiError("name is required", 400);
   if (!Array.isArray(body.files) || body.files.length === 0) {
     throw new ApiError("files[] is required", 400);
+  }
+  if (body.files.length > MAX_FILES) {
+    throw new ApiError(`too many files (max ${MAX_FILES})`, 413);
+  }
+  let totalBytes = 0;
+  for (const f of body.files) {
+    const n = b64Bytes(typeof f.contentBase64 === "string" ? f.contentBase64 : "");
+    if (n > MAX_FILE_BYTES) throw new ApiError("a file exceeds the 25 MB per-file limit", 413);
+    totalBytes += n;
+  }
+  if (totalBytes > MAX_TOTAL_BYTES) {
+    throw new ApiError("publish exceeds the 50 MB total limit", 413);
   }
 
   // spaceId defaults to a freshly generated label if not supplied.
