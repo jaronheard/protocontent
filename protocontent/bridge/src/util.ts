@@ -214,3 +214,53 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// --- gitignore convention ---------------------------------------------------
+
+/**
+ * Best-effort: if `startDir` is inside a git repo, ensure `.protocontent/` is
+ * listed in the repo's .gitignore. protocontent artifacts are ephemeral — you
+ * publish them to a URL, you don't commit them — so staging them under
+ * `.protocontent/` keeps them out of version control automatically.
+ *
+ * Idempotent; silent on any failure; opt out with PROTOCONTENT_NO_GITIGNORE=1.
+ */
+export async function ensureGitignore(startDir: string = process.cwd()): Promise<void> {
+  if (process.env.PROTOCONTENT_NO_GITIGNORE) return;
+  try {
+    // Walk up to the repo root (a directory containing .git).
+    let dir = path.resolve(startDir);
+    let root: string | null = null;
+    for (let i = 0; i < 40; i++) {
+      try {
+        await fs.stat(path.join(dir, ".git"));
+        root = dir;
+        break;
+      } catch {
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+      }
+    }
+    if (!root) return; // not inside a git repo — nothing to do
+
+    const giPath = path.join(root, ".gitignore");
+    let content = "";
+    try {
+      content = await fs.readFile(giPath, "utf8");
+    } catch {
+      // no .gitignore yet — appendFile will create it
+    }
+    const alreadyIgnored = content
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .some((l) => l === ".protocontent/" || l === ".protocontent");
+    if (alreadyIgnored) return;
+
+    const sep = content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+    const block = `${sep}\n# protocontent — ephemeral published artifacts (not source)\n.protocontent/\n`;
+    await fs.appendFile(giPath, block);
+  } catch {
+    // best effort — never fail a publish over this
+  }
+}
