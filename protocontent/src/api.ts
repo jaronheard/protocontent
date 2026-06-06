@@ -18,8 +18,10 @@ import {
   spaceOrigin,
   setSpaceBlocked,
   insertReport,
+  listProjectSpaces,
 } from "./db";
 import { json, errorJson, slugify, genSpaceId } from "./util";
+import { DASHBOARD_HTML } from "./dashboard";
 
 /** Notify the space's Durable Object so it broadcasts to live viewers. */
 async function notifySpace(env: Env, spaceId: string): Promise<void> {
@@ -103,6 +105,26 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
   }
 
   try {
+    // First-party claim/manage dashboard on the control plane.
+    if ((path === "/" || path === "/app") && request.method === "GET") {
+      return new Response(DASHBOARD_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" },
+      });
+    }
+
+    // GET /v1/spaces (auth) -> all spaces owned by this project.
+    if (path === "/v1/spaces" && request.method === "GET") {
+      return await handleProjectSpaces(request, env);
+    }
+
+    // GitHub OAuth (secret-gated opt-in).
+    if (path === "/v1/auth/github" && request.method === "GET") {
+      return await handleAuthGithub(request, env);
+    }
+    if (path === "/v1/auth/github/callback" && request.method === "GET") {
+      return await handleAuthGithubCallback(request, env);
+    }
+
     // 1. POST /v1/projects (no auth) -> mint anonymous project + token.
     if (path === "/v1/projects" && request.method === "POST") {
       if (!(await rateLimit(env, `proj:${clientIp(request)}`, 30, 3600))) {
@@ -289,6 +311,65 @@ async function handleAdminBlock(request: Request, env: Env): Promise<Response> {
   const ok = await setSpaceBlocked(env, String(body.spaceId), blocked);
   if (!ok) throw new ApiError("space not found", 404);
   return json({ ok: true, spaceId: body.spaceId, blocked });
+}
+
+async function handleProjectSpaces(request: Request, env: Env): Promise<Response> {
+  const { projectId } = await requireProject(request, env);
+  const rows = await listProjectSpaces(env, projectId);
+  const spaces = rows.map((s) => ({
+    id: s.id,
+    label: s.label,
+    artifactCount: s.count,
+    blocked: !!s.blocked,
+    url: s.index_token ? `${spaceOrigin(s.id)}/?k=${s.index_token}` : `${spaceOrigin(s.id)}/`,
+    createdAt: s.created_at,
+  }));
+  return json({ spaces });
+}
+
+async function handleAuthGithub(request: Request, env: Env): Promise<Response> {
+  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
+    return errorJson("sign-in not configured", 503);
+  }
+  const url = new URL(request.url);
+  const authorize = new URL("https://github.com/login/oauth/authorize");
+  authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
+  authorize.searchParams.set("redirect_uri", `${url.origin}/v1/auth/github/callback`);
+  authorize.searchParams.set("scope", "read:user");
+  return Response.redirect(authorize.toString(), 302);
+}
+
+async function handleAuthGithubCallback(request: Request, env: Env): Promise<Response> {
+  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
+    return errorJson("sign-in not configured", 503);
+  }
+  const code = new URL(request.url).searchParams.get("code");
+  if (!code) return errorJson("missing code", 400);
+  const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify({
+      client_id: env.GITHUB_CLIENT_ID,
+      client_secret: env.GITHUB_CLIENT_SECRET,
+      code,
+    }),
+  });
+  const tokenJson = (await tokenRes.json()) as { access_token?: string };
+  if (!tokenJson.access_token) return errorJson("github token exchange failed", 502);
+  const userRes = await fetch("https://api.github.com/user", {
+    headers: {
+      authorization: `Bearer ${tokenJson.access_token}`,
+      "user-agent": "protocontent",
+      accept: "application/vnd.github+json",
+    },
+  });
+  const user = (await userRes.json()) as { login?: string };
+  const login = (user.login || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
+  // TODO: link this GitHub identity to a project to claim its spaces.
+  return new Response(
+    `<!doctype html><meta charset=utf-8><body style="font-family:system-ui;padding:3rem;max-width:32rem;margin:auto"><h1>Signed in as ${login}</h1><p>GitHub sign-in is wired up. Linking your identity to a project (to claim spaces without pasting a token) is the next step.</p><p><a href="/">&larr; back to the dashboard</a></p></body>`,
+    { headers: { "content-type": "text/html; charset=utf-8" } },
+  );
 }
 
 async function handleHistory(

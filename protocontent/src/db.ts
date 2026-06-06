@@ -152,6 +152,29 @@ export async function insertReport(
     .run();
 }
 
+export interface ProjectSpace {
+  id: string;
+  label: string | null;
+  index_token: string | null;
+  blocked: number | null;
+  created_at: number;
+  count: number;
+}
+
+/** List all spaces owned by a project, with artifact counts (newest first). */
+export async function listProjectSpaces(env: Env, projectId: string): Promise<ProjectSpace[]> {
+  const res = await env.DB.prepare(
+    `SELECT s.id, s.label, s.index_token, s.blocked, s.created_at, COUNT(a.id) AS count
+     FROM spaces s LEFT JOIN artifacts a ON a.space_id = s.id
+     WHERE s.project_id = ?
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`,
+  )
+    .bind(projectId)
+    .all<ProjectSpace>();
+  return res.results ?? [];
+}
+
 // ---------------------------------------------------------------------------
 // Artifacts + files
 // ---------------------------------------------------------------------------
