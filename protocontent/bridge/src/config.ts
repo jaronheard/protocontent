@@ -101,19 +101,63 @@ export async function resolveToken(apiBase: string): Promise<string> {
   return minted.token;
 }
 
+function spacesPath(): string {
+  return path.join(configDir(), "spaces.json");
+}
+
+async function readSpaces(): Promise<Record<string, string>> {
+  try {
+    const raw = await fs.readFile(spacesPath(), "utf8");
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeSpaces(map: Record<string, string>): Promise<void> {
+  await fs.mkdir(configDir(), { recursive: true, mode: 0o700 });
+  await fs.writeFile(spacesPath(), JSON.stringify(map, null, 2) + "\n", { mode: 0o600 });
+  try {
+    await fs.chmod(spacesPath(), 0o600);
+  } catch {
+    // best effort
+  }
+}
+
+// A valid high-entropy space id: two words + a >=20-char base32 suffix.
+const NEW_SPACE_ID = /^[a-z]+-[a-z]+-[a-z2-7]{20,}$/;
+
 /**
- * Compute the per-process space id and label.
- * Seeded deterministically from CLAUDE_SESSION_ID when present so the
- * space lines up with the agent's thread; otherwise random.
+ * Compute the space id + label for this run.
+ *
+ * The space id is HIGH-ENTROPY RANDOM (~110 bits) — it's the capability that
+ * grants access to a space, so it must be unguessable and is NOT derived from
+ * anything public like the agent session id. For stability across bridge
+ * restarts within the SAME agent thread, the random id is cached keyed by
+ * CLAUDE_SESSION_ID in ~/.protocontent/spaces.json. Without a session id, each
+ * process gets a fresh random space.
  */
-export function computeSpace(): { spaceId: string; spaceLabel?: string } {
-  const seed = process.env.CLAUDE_SESSION_ID?.trim();
-  const spaceId = generateSpaceId(seed && seed.length > 0 ? seed : undefined);
+export async function computeSpace(): Promise<{ spaceId: string; spaceLabel?: string }> {
+  const sessionKey = process.env.CLAUDE_SESSION_ID?.trim();
+  let spaceId: string;
+  if (sessionKey && sessionKey.length > 0) {
+    const map = await readSpaces();
+    const cached = map[sessionKey];
+    if (cached && NEW_SPACE_ID.test(cached)) {
+      spaceId = cached;
+    } else {
+      spaceId = generateSpaceId();
+      map[sessionKey] = spaceId;
+      await writeSpaces(map);
+    }
+  } else {
+    spaceId = generateSpaceId();
+  }
 
   let spaceLabel: string | undefined;
   try {
-    const base = path.basename(process.cwd());
-    const label = slugify(base, "");
+    const label = slugify(path.basename(process.cwd()), "");
     spaceLabel = label.length > 0 ? label : undefined;
   } catch {
     spaceLabel = undefined;
@@ -133,6 +177,6 @@ export interface BridgeConfig {
 export async function loadConfig(): Promise<BridgeConfig> {
   const apiBase = getApiBase();
   const token = await resolveToken(apiBase);
-  const { spaceId, spaceLabel } = computeSpace();
+  const { spaceId, spaceLabel } = await computeSpace();
   return { apiBase, token, spaceId, spaceLabel };
 }
