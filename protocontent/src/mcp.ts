@@ -80,17 +80,36 @@ export class ProtoMcpAgent extends McpAgent<Env, McpState> {
     this.server.tool(
       "publish_html",
       {
-        content: z.string().describe("Full HTML document to publish."),
+        content: z
+          .string()
+          .optional()
+          .describe("Full HTML document to publish (also accepted as `html`/`body`)."),
+        // Aliases for `content`. The tool is named `publish_html`, so agents
+        // naturally reach for `html`; accept it instead of failing.
+        html: z.string().optional().describe("Alias for `content`."),
+        body: z.string().optional().describe("Alias for `content`."),
         name: z.string().optional().describe("Artifact name (URL path segment)."),
         ttl: z
           .enum(["1h", "6h", "1d", "3d", "7d", "30d"])
           .optional()
           .describe("Time to live. Default 7d."),
       },
-      async ({ content, name, ttl }) => {
+      async ({ content, html, body, name, ttl }) => {
+        const doc = content ?? html ?? body;
+        if (doc === undefined) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: "Provide `content` (the HTML document, also accepted as `html`/`body`).",
+              },
+            ],
+          };
+        }
         const spaceId = await this.ensureSessionSpace();
         const artifactName = slugify(name || "page");
-        const contentBase64 = bytesToBase64(new TextEncoder().encode(content));
+        const contentBase64 = bytesToBase64(new TextEncoder().encode(doc));
         const result = await publishArtifact(this.env, {
           spaceId,
           name: artifactName,

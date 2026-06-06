@@ -1,6 +1,6 @@
 {
   "name": "protocontent",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Co-located stdio MCP bridge for protocontent — read local files and publish them to the protocontent HTTP API.",
   "type": "module",
   "bin": {

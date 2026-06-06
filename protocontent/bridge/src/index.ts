@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   );
 
   const server = new McpServer(
-    { name: "protocontent", version: "0.2.1" },
+    { name: "protocontent", version: "0.2.2" },
     {
       instructions:
         "Publish local files/folders to protocontent and share a tappable, live URL. Each agent " +
@@ -127,9 +127,9 @@ async function main(): Promise<void> {
       description:
         "Publish a single HTML (or other) file or inline content to this space and SHARE its " +
         "tappable, live URL with the user. Provide exactly one of `path` (a file on disk) or " +
-        "`content` (inline text). To UPDATE an artifact as you iterate, call again with the SAME " +
-        "`name` — it republishes in place at the same URL (don't invent a new name). The space " +
-        "page updates live as you republish.",
+        "`content` (inline text; `html`/`body` accepted as aliases). To UPDATE an artifact as you " +
+        "iterate, call again with the SAME `name` — it republishes in place at the same URL (don't " +
+        "invent a new name). The space page updates live as you republish.",
       inputSchema: {
         path: z
           .string()
@@ -139,6 +139,18 @@ async function main(): Promise<void> {
           .string()
           .optional()
           .describe("Inline file content to publish (alternative to `path`)."),
+        // `html`/`body` are accepted as aliases for `content`. The tool name is
+        // `publish_html`, so agents — especially when calling before the schema
+        // loads — reach for `html`. Accepting it makes the obvious guess work
+        // instead of failing with a confusing XOR error.
+        html: z
+          .string()
+          .optional()
+          .describe("Alias for `content` (inline file content)."),
+        body: z
+          .string()
+          .optional()
+          .describe("Alias for `content` (inline file content)."),
         name: z
           .string()
           .optional()
@@ -152,10 +164,18 @@ async function main(): Promise<void> {
       },
     },
     async (args) => {
-      const { path: filePath, content, name, ttl } = args;
-      if ((filePath && content) || (!filePath && content === undefined)) {
+      const { path: filePath, name, ttl } = args;
+      // Coalesce the inline-content aliases into a single value.
+      const content = args.content ?? args.html ?? args.body;
+      if (filePath && content !== undefined) {
         return errorResult(
-          "Provide exactly one of `path` or `content`."
+          "Provide exactly one of `path` or `content`, not both."
+        );
+      }
+      if (!filePath && content === undefined) {
+        return errorResult(
+          "Provide either `content` (inline text, also accepted as `html`/`body`) " +
+            "or `path` (a file on disk)."
         );
       }
 
