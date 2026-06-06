@@ -101,13 +101,21 @@ async function main(): Promise<void> {
   );
 
   const server = new McpServer(
-    { name: "protocontent", version: "0.1.0" },
+    { name: "protocontent", version: "0.2.1" },
     {
       instructions:
-        "Publish local files/folders to protocontent and get a shareable, live-updating URL. " +
-        "Each agent thread maps to one persistent 'space'. Use publish_html for a single file " +
-        "or inline content, publish_folder for a directory (e.g. a built site), and list/history/" +
-        "unpublish/keep to manage artifacts. Always show the returned markdown link to the user.",
+        "Publish local files/folders to protocontent and share a tappable, live URL. Each agent " +
+        "thread is one persistent 'space'; everything you publish lands there and the space page " +
+        "updates in real time as you republish.\n\n" +
+        "WHEN TO PUBLISH: any self-contained artifact a human would want to open in a browser — " +
+        "HTML reports, plans, dashboards, prototypes, generated docs, diagrams, screenshots, or a " +
+        "built static site. Do NOT publish repo source code, secrets, or files meant to be committed.\n\n" +
+        "ALWAYS, on every publish: show the returned markdown link to the user. To UPDATE an artifact " +
+        "as you iterate, call publish_html/publish_folder again with the SAME `name` — it republishes " +
+        "in place at the same URL (do not invent a new name like plan-v2). Use `keep` to stop expiry.\n\n" +
+        "AT THE END of a turn where you published anything: surface BOTH (1) the private session-index " +
+        "link (the space page, carrying its ?k= token — the one link that shows everything) and (2) each " +
+        "worked-on artifact's direct link. The `list` tool returns both. Label which is private vs public.",
     }
   );
 
@@ -117,9 +125,11 @@ async function main(): Promise<void> {
     {
       title: "Publish a single file",
       description:
-        "Publish a single HTML (or other) file or inline content to this space and get a " +
-        "tappable, live URL. Provide exactly one of `path` (a file on disk) or `content` " +
-        "(inline text). The space page updates live as you republish.",
+        "Publish a single HTML (or other) file or inline content to this space and SHARE its " +
+        "tappable, live URL with the user. Provide exactly one of `path` (a file on disk) or " +
+        "`content` (inline text). To UPDATE an artifact as you iterate, call again with the SAME " +
+        "`name` — it republishes in place at the same URL (don't invent a new name). The space " +
+        "page updates live as you republish.",
       inputSchema: {
         path: z
           .string()
@@ -214,9 +224,10 @@ async function main(): Promise<void> {
     {
       title: "Publish a folder",
       description:
-        "Recursively publish a local directory (e.g. a built static site) to this space and " +
-        "get a tappable, live URL. Skips node_modules, .git, and dotfiles. The space page " +
-        "updates live as you republish.",
+        "Recursively publish a local directory (e.g. a built static site) to this space and SHARE " +
+        "its tappable, live URL with the user. To UPDATE it, call again with the SAME `name` — it " +
+        "republishes in place at the same URL. Skips node_modules, .git, and dotfiles. The space " +
+        "page updates live as you republish.",
       inputSchema: {
         dir: z.string().describe("Path to the directory to publish."),
         entry: z
@@ -315,7 +326,9 @@ async function main(): Promise<void> {
     {
       title: "List artifacts in this space",
       description:
-        "List all artifacts published in this space, with their live URLs and versions.",
+        "List every artifact in this space with its live URL and version, plus the private " +
+        "session-index link. Use this at the END of a task to surface BOTH the index link (private, " +
+        "?k=) and each worked-on artifact's direct link (public) to the user.",
       inputSchema: {},
     },
     async () => {
@@ -349,7 +362,8 @@ async function main(): Promise<void> {
     {
       title: "Show an artifact's version history",
       description:
-        "Show the published version history of a named artifact in this space.",
+        "Show the published version history of a named artifact in this space (each republish under " +
+        "the same name is a new version).",
       inputSchema: {
         name: z.string().describe("Artifact name (slug) to show history for."),
       },

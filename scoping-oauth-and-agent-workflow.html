@@ -70,7 +70,7 @@
   <h1>OAuth badge &amp; agent-workflow integration</h1>
   <p class="lede">Two designs you asked me to scope overnight: how a coding agent reliably uses protocontent, and a Vercel-style protocontent badge on shared content (around the sandbox constraint). Researched + designed by a 6-agent ultracode pass; this is the synthesis for your call.</p>
   <div class="chips">
-    <span class="chip"><b>Status</b> · agent workflow: scoping · viewer shell + OAuth: shipped</span>
+    <span class="chip"><b>Status</b> · agent workflow: shipped (pending 0.2.1 npm publish) · viewer shell + OAuth: shipped</span>
     <span class="chip"><b>Source</b> · ultracode (6 agents)</span>
     <span class="chip"><b>For</b> · your review &amp; go/no-go</span>
   </div>
@@ -81,7 +81,7 @@
     <h2>How a coding agent reliably uses protocontent</h2>
     <p>Goal: an agent that, on its own, (A) publishes the artifacts worth publishing, (B) shares the link on every publish, (C) keeps them updated as it iterates, and (D) ends with <b>both</b> the session-index link and each worked-on file's link.</p>
 
-    <div class="rec"><b>Recommendation.</b> A <b>defense-in-depth stack of 5 layers</b>, shipped as one installable Claude Code <b>plugin</b> (MCP + Skill + Stop hook), plus a portable <code>AGENTS.md</code> + tool-description baseline for non-Claude agents. The principle: reliability tracks <em>who controls execution</em> — the model (probabilistic) vs. the harness (deterministic). So every critical behavior is covered by <b>both</b> a smart layer (judgment) and a deterministic layer (guarantee). The <b>Stop hook is the anchor</b> that turns "usually shares" into "always shares."</p></div>
+    <div class="rec"><b>Shipped &amp; live.</b> The <b>defense-in-depth stack of 5 layers</b> is built and installable as one Claude Code <b>plugin</b> (<code>plugin/</code>, MCP + Skill + Stop hook), plus a portable <code>AGENTS.md</code> + tool-description baseline for non-Claude agents. The principle held: reliability tracks <em>who controls execution</em> — the model (probabilistic) vs. the harness (deterministic), so every critical behavior is covered by <b>both</b> a smart layer (judgment) and a deterministic layer (guarantee), with the <b>Stop hook as the anchor</b> that turns "usually shares" into "always shares." The only pending step is the routine bridge <b>0.2.1 npm publish</b> so the rewritten MCP instructions reach <code>npx</code> users.</p></div>
 
     <div class="scroll-x"><table class="t">
       <tr><th>Layer</th><th>Role</th><th>Reach</th></tr>
@@ -103,6 +103,7 @@
     <div class="flag"><b>Note — the "hard prerequisite" the workflow flagged is already done.</b> It worried the bridge emits the bare (404-ing) index URL. In fact PR #3 already wired the tokenized <code>?k=</code> link: publish + <code>list</code> return it (<code>api.ts</code>) and the bridge surfaces it (<code>index.ts</code> uses the server's <code>spaceUrl</code>). Verified. So the agent already shares a <em>working</em> index link — no Phase-0 blocker here.</div>
 
     <div class="kick">Sketch — improved MCP <code>instructions</code> string</div>
+    <p class="muted" style="font-size:13.5px;margin:0 0 8px">This is the shipped version (bridge v0.2.1).</p>
     <pre>Publish local files/folders to protocontent and share a tappable, live URL. Each
 agent thread is one persistent "space"; everything you publish lands there and the
 space page updates in real time as you republish.
@@ -123,6 +124,7 @@ everything) and (2) each artifact's direct link for the files you worked on. Get
 both in one call with `list`. Label which is private vs public.</pre>
 
     <div class="kick">Sketch — <code>skills/publishing-artifacts/SKILL.md</code></div>
+    <p class="muted" style="font-size:13.5px;margin:0 0 8px">This is the shipped version (<code>plugin/skills/publishing-artifacts/SKILL.md</code>).</p>
     <pre><span class="c">---
 name: publishing-artifacts
 description: &gt;-
@@ -156,6 +158,7 @@ End with a "Published" section, sourced from protocontent:list:
 The index link is PRIVATE (token-gated); per-artifact links are PUBLIC. Label them.</pre>
 
     <div class="kick">Sketch — <code>AGENTS.md</code> snippet (portable, non-Claude agents)</div>
+    <p class="muted" style="font-size:13.5px;margin:0 0 8px">This is the shipped version (<code>AGENTS.md</code> at the repo root).</p>
     <pre>## Sharing artifacts (protocontent)
 When you build something a human would open in a browser — an HTML report, plan,
 dashboard, prototype, or built site — publish it with the protocontent MCP tools
@@ -175,11 +178,11 @@ again with the same `name`. At the end of a task, list both the session-index li
 
     <div class="kick">Build plan</div>
     <div class="card">
-      <div class="phase"><div class="w">Phase 1</div><p>Rewrite the MCP <code>instructions</code> + front-load tool descriptions (share/update rule first). Ships to all MCP clients, no install. Measure share-rate before/after.</p></div>
-      <div class="phase"><div class="w">Phase 2</div><p>Author <code>skills/publishing-artifacts/SKILL.md</code>; tune the description via observe-refine-test (skill-creator) for trigger accuracy.</p></div>
-      <div class="phase"><div class="w">Phase 3</div><p>Add the scoped prompt-based <b>Stop hook</b> (command pre-filter + <code>stop_hook_active</code> guard); test the block-cap + false-positive rate on pure-code turns; opt-out.</p></div>
-      <div class="phase"><div class="w">Phase 4</div><p>Bundle into the <b>protocontent plugin</b> (<code>.mcp.json</code> + <code>skills/</code> + <code>hooks/</code>); AGENTS.md snippet in README; publish to a marketplace. Onboarding: <code>/plugin install protocontent</code>.</p></div>
-      <div class="phase"><div class="w">Phase 5</div><p>Document the AGENTS.md + tool-description path as the portable baseline for Cursor/Codex/others (best-effort, no Stop equivalent).</p></div>
+      <div class="phase"><div class="w">Phase 1 · <span class="ok">Shipped</span></div><p><b>MCP instructions + tool descriptions rewritten in code</b> (bridge v0.2.1): share/update rule front-loaded on <code>publish_html</code>/<code>publish_folder</code>/<code>list</code>/<code>history</code> + the dual-link end-of-task format. <span class="no">Live to <code>npx</code> users only after the routine 0.2.1 npm publish.</span></p></div>
+      <div class="phase"><div class="w">Phase 2 · <span class="ok">Shipped</span></div><p><code>plugin/skills/publishing-artifacts/SKILL.md</code> shipped: when/what to publish, the same-name update-in-place rule, the dual-link end-of-task format.</p></div>
+      <div class="phase"><div class="w">Phase 3 · <span class="ok">Shipped</span></div><p>The scoped <b>Stop hook</b> (<code>plugin/hooks/hooks.json</code> + <code>plugin/scripts/on-stop.sh</code>) shipped: conservative + fail-open, nudges at most once (<code>stop_hook_active</code> guard) only when a publish tool ran without a link in the final message; opt-out via <code>PROTOCONTENT_DISABLE_STOP_HOOK=1</code>. Unit-tested against crafted transcripts.</p></div>
+      <div class="phase"><div class="w">Phase 4 · <span class="ok">Shipped</span></div><p>Bundled into the <b>protocontent plugin</b> (<code>.claude-plugin/plugin.json</code>, MCP via <code>npx -y protocontent</code> + <code>skills/</code> + <code>hooks/</code>) with <code>.claude-plugin/marketplace.json</code>; <code>claude plugin validate</code> passes. Onboarding: <code>/plugin marketplace add jaronheard/protocontent</code> + <code>/plugin install protocontent@protocontent</code>.</p></div>
+      <div class="phase"><div class="w">Phase 5 · <span class="ok">Shipped</span></div><p><code>AGENTS.md</code> at the repo root carries the publish-and-share snippet as the portable baseline for Cursor/Codex/Aider/others (best-effort, no Stop equivalent).</p></div>
     </div>
   </div>
 
@@ -255,8 +258,8 @@ frame-ancestors 'none'; base-uri 'none'</pre>
       <li><b>Badge: ship the viewer-shell at all?</b> <span class="ok">Resolved — shipped.</span> A top-level navigation to <code>/&lt;name&gt;</code> returns the trusted shell; everything else (embeds, bots, assets, <code>?raw=1</code>) gets the artifact bytes byte-for-byte.</li>
       <li><b>Index link by default?</b> <span class="ok">Resolved — gated.</span> The <code>?k=</code> session-index link is shown only to the signed-in owner or someone arriving with a <code>?k=</code> token; never to an anonymous bare-link viewer.</li>
       <li><b>OAuth purpose.</b> <span class="ok">Resolved.</span> Minimal sign-in/out + the ownership-gated index link shipped. Full owner <em>actions</em> in the badge (keep/unpublish/make-public/history via the cookie session) are deferred.</li>
-      <li><b>Stop hook aggressiveness.</b> A real guarantee, but it nags. Default-on with opt-out, or opt-in?</li>
-      <li><b>Prereqs:</b> the GitHub OAuth app + secrets (Part B) are provisioned and OAuth is live; the bridge <code>0.2.0</code> is published, but the improved instructions / skill / hook / plugin that reach <code>npx</code> users (Part A) are <b>not shipped yet</b>.</li>
+      <li><b>Stop hook aggressiveness.</b> <span class="ok">Resolved — shipped conservative.</span> Fail-open, nudges at most once (<code>stop_hook_active</code> guard), only when a publish tool ran without a link in the final message; opt-out via <code>PROTOCONTENT_DISABLE_STOP_HOOK=1</code>. Still tunable after live testing.</li>
+      <li><b>Prereqs you hold:</b> the GitHub OAuth app + secrets (Part B) are set and OAuth is live. For Part A's instructions layer, the bridge <code>0.2.1</code> npm publish is the one remaining routine step so the rewritten instructions reach <code>npx</code> users — the plugin (skill + hook + MCP) and <code>AGENTS.md</code> are already installable from the repo.</li>
     </ul>
   </div>
 

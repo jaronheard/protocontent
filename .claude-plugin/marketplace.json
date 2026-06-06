@@ -1,0 +1,12 @@
+{
+  "name": "protocontent",
+  "description": "The protocontent plugin: publish browser-openable artifacts and share live, updating links.",
+  "owner": { "name": "Jaron Heard", "email": "jaronheard@gmail.com" },
+  "plugins": [
+    {
+      "name": "protocontent",
+      "source": "./plugin",
+      "description": "Publish browser-openable artifacts to protocontent and share live, updating links — automatically."
+    }
+  ]
+}
