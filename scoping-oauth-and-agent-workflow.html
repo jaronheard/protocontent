@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>protocontent — Scoping: OAuth badge + agent workflow</title>
+<style>
+  :root{
+    --bg:#fbfaf7;--panel:#fff;--ink:#1a1a17;--muted:#6b6960;--line:#e7e3d8;
+    --accent:#c2410c;--accent-soft:#fff1e9;--good:#15803d;--good-soft:#e7f6ec;
+    --warn:#b45309;--warn-soft:#fdf3e3;--code-bg:#1f1d1a;--code-ink:#f3efe6;--chip:#f1eee5;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(40,30,10,.07);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg:#16140f;--panel:#1f1c16;--ink:#f1ede3;--muted:#a7a194;--line:#332e24;
+    --accent:#fb923c;--accent-soft:#2a1c11;--good:#4ade80;--good-soft:#13241a;
+    --warn:#fbbf24;--warn-soft:#241c0c;--code-bg:#0d0c0a;--code-ink:#f3efe6;--chip:#272319;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.62;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:58px 24px 120px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.84em;background:var(--chip);padding:.12em .42em;border-radius:5px;border:1px solid var(--line)}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:40px;line-height:1.06;letter-spacing:-.03em;margin:.2em 0 .2em;font-weight:850}
+  .lede{font-size:18.5px;color:var(--muted);max-width:64ch;margin:0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+  .chip{font-size:12.5px;background:var(--chip);border:1px solid var(--line);color:var(--muted);padding:4px 11px;border-radius:999px;font-weight:500}
+  .chip b{color:var(--ink);font-weight:600}
+  .part{margin-top:54px;padding-top:30px;border-top:2px solid var(--line)}
+  .partlabel{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+  h2{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:.1em 0 6px;line-height:1.15}
+  h3{font-size:18px;font-weight:730;margin:28px 0 6px;letter-spacing:-.01em}
+  .kick{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin:26px 0 2px}
+  p{margin:0 0 13px}.muted{color:var(--muted)}
+  .rec{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:16px 18px;margin:14px 0;font-size:16px}
+  .rec b{color:var(--accent)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:16px 18px;box-shadow:var(--shadow);margin:12px 0}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.55;margin:12px 0;border:1px solid rgba(255,255,255,.06);white-space:pre-wrap}
+  pre .c{color:#8a8578}
+  .step{display:grid;grid-template-columns:26px 1fr;gap:13px;padding:11px 0;border-top:1px solid var(--line);font-size:14.5px}
+  .step:first-child{border-top:none}
+  .step .n{font-family:var(--mono);font-size:11.5px;font-weight:700;color:#fff;background:var(--accent);width:24px;height:24px;border-radius:7px;display:grid;place-items:center}
+  table.t{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:10px 0}
+  .t th,.t td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  .t th{background:var(--chip);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+  .t tr:last-child td{border-bottom:none}.t td b{font-weight:650}
+  .scroll-x{overflow-x:auto}
+  ul.tight{margin:6px 0 14px;padding-left:20px}ul.tight li{margin:5px 0;font-size:14.5px}
+  .ok{color:var(--good);font-weight:700}.no{color:var(--accent);font-weight:700}
+  .flag{background:var(--warn-soft);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:0 10px 10px 0;padding:13px 16px;margin:12px 0;font-size:14.5px}
+  .flag b{color:var(--warn)}
+  .phase{display:grid;grid-template-columns:88px 1fr;gap:16px;padding:13px 0;border-top:1px solid var(--line)}
+  .phase:first-child{border-top:none}.phase .w{font-size:13px;font-weight:700;color:var(--accent)}
+  .phase p{margin:0;font-size:14.5px;color:var(--muted)}
+  footer{margin-top:54px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  footer ol{padding-left:20px}footer li{margin:3px 0;word-break:break-all}
+  .tt{position:fixed;top:16px;right:18px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-family:var(--sans)}
+  .tt:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<button class="tt" onclick="toggleTheme()" id="ttbtn">◐ Dark</button>
+<div class="wrap">
+
+  <div class="eyebrow">protocontent · scoping · decision-ready</div>
+  <h1>OAuth badge &amp; agent-workflow integration</h1>
+  <p class="lede">Two designs you asked me to scope overnight: a Vercel-style protocontent badge on shared content (around the sandbox constraint), and how a coding agent reliably uses protocontent. Researched + designed by a 6-agent ultracode pass; this is the synthesis for your call.</p>
+  <div class="chips">
+    <span class="chip"><b>Type</b> · scoping, not built</span>
+    <span class="chip"><b>Source</b> · ultracode (6 agents)</span>
+    <span class="chip"><b>For</b> · your review &amp; go/no-go</span>
+  </div>
+
+  <!-- ================= PART A ================= -->
+  <div class="part">
+    <div class="partlabel">Part A</div>
+    <h2>The protocontent badge + OAuth</h2>
+    <p>Your vision: a small, dismissible protocontent badge overlaid on each shared artifact, like Vercel's preview toolbar — the entry point for sign-in and owner actions. The collision: artifacts are served with <code>CSP: sandbox</code> (opaque origin, no cookies/storage), so a badge injected <em>into</em> the artifact is identity-blind and network-isolated by construction. It literally cannot know who's signed in.</p>
+
+    <div class="rec"><b>Recommendation.</b> Build the badge as a <b>trusted protocontent "viewer" shell</b> that frames the unchanged artifact in a sandboxed iframe. It's the only way to put the badge on the surface people actually share — the artifact URL — without weakening the opaque-origin isolation. Sequence it so the risky part comes last.</p></div>
+
+    <div class="kick">Architecture</div>
+    <p>Split content serving by a query flag:</p>
+    <ul class="tight">
+      <li><code>&lt;space&gt;.protocontent.app/&lt;name&gt;</code> → a <b>trusted first-party viewer shell</b> (tight CSP, <code>frame-src 'self'</code>; the badge rendered in a <b>closed shadow DOM</b>).</li>
+      <li><code>&lt;space&gt;.protocontent.app/&lt;name&gt;?raw=1</code> → today's <b>exact artifact bytes, byte-for-byte</b>, with the unchanged <code>sandbox</code> opaque-origin CSP.</li>
+      <li>The viewer frames <code>?raw=1</code> in an <code>&lt;iframe sandbox="allow-scripts allow-forms allow-popups allow-modals allow-downloads"&gt;</code> (no <code>allow-same-origin</code>).</li>
+    </ul>
+    <p>The badge lives <b>only in the trusted parent</b>, never in the artifact — so it's genuinely trustworthy chrome, and the artifact stays an identity-blind, network-isolated passive payload (a cross-origin opaque child can't reach the parent DOM). <code>?raw=1</code> doubles as the embed escape hatch; bots / <code>Sec-Fetch-Dest: iframe</code> get raw directly to avoid double-framing.</p>
+
+    <div class="kick">Sign-in flow (popup, not redirect — keeps the artifact on screen)</div>
+    <div class="card">
+      <div class="step"><div class="n">1</div><div>Badge "Sign in" opens a <b>popup</b> to <code>api.protocontent.com/v1/auth/github</code> (the route exists; 503 until secrets set).</div></div>
+      <div class="step"><div class="n">2</div><div>GitHub → <code>/v1/auth/github/callback</code> sets a session cookie <b>only on <code>api.protocontent.com</code></b> (<code>SameSite=None; Secure; HttpOnly</code>), then <code>postMessage</code>s the opener and closes.</div></div>
+      <div class="step"><div class="n">3</div><div>Badge (validating <code>event.origin</code>) re-checks identity via <code>fetch('/v1/me?space=…', {credentials:'include'})</code> → <code>{login, avatarUrl, ownsThisSpace}</code>.</div></div>
+      <div class="step"><div class="n">4</div><div>First sign-in links <code>github_user_id → project_id</code> (closes the existing OAuth TODO). Owner actions reuse existing endpoints, now also cookie-auth: <b>keep · unpublish · make-index-public · open index (the <code>?k=</code> link) · history</b>. Report stays available to everyone.</div></div>
+    </div>
+
+    <div class="kick">How the sandbox stays intact</div>
+    <p>The opaque-origin CSP is preserved <b>byte-for-byte</b> by never putting the badge inside the artifact. Identity lives entirely on <code>api.protocontent.com</code>; <b><code>*.protocontent.app</code> stays cookie-free by design</b>, so the PSL-free cross-subdomain isolation is untouched. The trust signal to the user is the URL bar (a protocontent-served <code>*.protocontent.app</code> page), not the frame nesting. Token discipline: <b>never</b> postMessage a token into the iframe (sandbox requires <code>targetOrigin:'*'</code> = world-readable).</p>
+
+    <div class="kick">Alternatives considered</div>
+    <div class="scroll-x"><table class="t">
+      <tr><th>Option</th><th>Verdict</th></tr>
+      <tr><td><b>Badge on the index page only</b></td><td><span class="ok">Adopted as Phase 1</span> — perfect isolation (index is already first-party/non-sandboxed), but invisible on the shared artifact link. De-risks the whole auth loop with zero artifact-serving changes; not the final destination.</td></tr>
+      <tr><td><b>Inject badge into artifact bytes</b> (watermark)</td><td><span class="no">Dead on arrival</span> — CSP-blocked from auth, mutates user bytes, sits in attacker-controllable DOM (a hostile artifact could spoof/cover it).</td></tr>
+      <tr><td><b>Edge-gate auth at Cloudflare</b>, no in-page UI</td><td><span class="no">Rejected for the badge</span> — strong isolation but delivers no badge/branding. Reuse the idea only for the <code>?k=</code> private index.</td></tr>
+      <tr><td><b>Top-level redirect</b> sign-in</td><td><span class="no">Rejected</span> — blows away the artifact the user was looking at. Popup + postMessage instead.</td></tr>
+      <tr><td><b>CHIPS / partitioned cookie</b> as the primary 3p-cookie fix</td><td><span class="no">Doesn't solve it</span> — CHIPS partitions by top-level site (the artifact subdomain), so it wouldn't share across spaces. Keep as an attempt; rely on the popup-postMessage fallback.</td></tr>
+    </table></div>
+
+    <div class="kick">Key risks</div>
+    <div class="flag"><b>#1 — Third-party cookies.</b> <code>SameSite=None</code> cookies are deprecated/partitioned (Safari ITP, Chrome). A credentialed <code>/v1/me</code> fetch from <code>*.protocontent.app</code> is genuinely cross-site and may be blocked. <b>Mitigation (ship from day one):</b> degrade to the popup-postMessage result as short-lived in-memory identity per tab — the popup is first-party to <code>api</code> during the flow, so it always works.</div>
+    <ul class="tight">
+      <li><b>CORS must change carefully</b> — <code>/v1/me</code> + owner actions need exact-origin echo (not <code>*</code>) + <code>Allow-Credentials: true</code>, allowlisted to <code>*.protocontent.app</code>. Getting this wrong breaks auth or opens a CSRF/credential-leak hole.</li>
+      <li><b>Never set an auth cookie on <code>*.protocontent.app</code></b> (same registrable site as untrusted artifacts). Dismissal state may only be a non-identifying <code>localStorage</code> boolean.</li>
+      <li><b><code>/&lt;name&gt;</code> now returns a shell, not raw bytes</b> — keep <code>?raw=1</code> prominent for embed fidelity; serve bots/iframe-dest raw.</li>
+      <li><b>GitHub OAuth app + secrets</b> must be provisioned (your manual step) before Phase 0 can be tested end-to-end.</li>
+    </ul>
+
+    <div class="kick">Build plan</div>
+    <div class="card">
+      <div class="phase"><div class="w">Phase 0</div><p>OAuth/cookie/CORS plumbing on <code>api.protocontent.com</code>: finish the callback (set session cookie + postMessage+close), add <code>GET /v1/me?space=</code>, link <code>github_user_id→project_id</code> on first sign-in, add origin-echo-with-credentials CORS, accept cookie-auth on owner actions. No UI risk.</p></div>
+      <div class="phase"><div class="w">Phase 1</div><p>Build the collapsed-dot→toolbar badge on the <b>already-non-sandboxed index page</b>. Wire <code>/v1/me</code>, the sign-in popup, owner actions + Report. Validates the whole loop with zero artifact-serving changes.</p></div>
+      <div class="phase"><div class="w">Phase 2</div><p>The prize: split <code>handleContent</code> — <code>/&lt;name&gt;</code> → viewer shell (tight CSP), <code>?raw=1</code> → unchanged artifact. Render the <em>same</em> badge component (closed shadow DOM) framing <code>?raw=1</code>. Bot/iframe-dest bypass.</p></div>
+      <div class="phase"><div class="w">Phase 3</div><p>Polish: dismissal persistence (non-identifying boolean), corner memory, <code>⌘.</code> shortcut, "hide for this session," and the 3p-cookie popup-postMessage fallback + CHIPS attempt.</p></div>
+    </div>
+  </div>
+
+  <!-- ================= PART B ================= -->
+  <div class="part">
+    <div class="partlabel">Part B</div>
+    <h2>How a coding agent reliably uses protocontent</h2>
+    <p>Goal: an agent that, on its own, (A) publishes the artifacts worth publishing, (B) shares the link on every publish, (C) keeps them updated as it iterates, and (D) ends with <b>both</b> the session-index link and each worked-on file's link.</p>
+
+    <div class="rec"><b>Recommendation.</b> A <b>defense-in-depth stack of 5 layers</b>, shipped as one installable Claude Code <b>plugin</b> (MCP + Skill + Stop hook), plus a portable <code>AGENTS.md</code> + tool-description baseline for non-Claude agents. The principle: reliability tracks <em>who controls execution</em> — the model (probabilistic) vs. the harness (deterministic). So every critical behavior is covered by <b>both</b> a smart layer (judgment) and a deterministic layer (guarantee). The <b>Stop hook is the anchor</b> that turns "usually shares" into "always shares."</p></div>
+
+    <div class="scroll-x"><table class="t">
+      <tr><th>Layer</th><th>Role</th><th>Reach</th></tr>
+      <tr><td><b>MCP instructions + tool descriptions</b></td><td>Always-surfaced micro-steer; front-loads share-on-publish, update-via-same-name, both-links.</td><td>All MCP hosts (incl. non-Claude)</td></tr>
+      <tr><td><b>Skill</b> <code>publishing-artifacts</code></td><td>Judgment + workflow: <em>what's</em> worth publishing, the exact dual-link format, the same-name rule.</td><td>Claude Code (model-invoked)</td></tr>
+      <tr><td><b>AGENTS.md / CLAUDE.md</b></td><td>Always-on salience; short pointer to the tool/skill. Advisory.</td><td>Cursor, Codex, Copilot, Zed, Aider, Gemini…</td></tr>
+      <tr><td><b>Stop hook</b> (scoped)</td><td><b>Deterministic enforcement.</b> Cheap pre-filter (changed <code>.html</code>/site) → Haiku yes/no only on turns that touched shareable artifacts → blocks if the link/links are missing.</td><td>Claude Code only</td></tr>
+      <tr><td><b>Plugin + marketplace</b></td><td>One-command distribution bundling MCP + skill + hook; versioned/updatable.</td><td>Claude Code only</td></tr>
+    </table></div>
+
+    <div class="kick">How each behavior is doubly ensured</div>
+    <ul class="tight">
+      <li><b>Auto-share (B):</b> bridge prints the link → tool desc says "show it" → skill formats it → <b>Stop hook blocks</b> if the link isn't in the final message.</li>
+      <li><b>Keep-updated (C):</b> skill+instructions say "re-call with the SAME name to update in place" → Stop hook catches a turn that changed the artifact on disk but didn't republish.</li>
+      <li><b>Index + per-file links (D):</b> skill prescribes the exact "Published" block from <code>list</code> → instructions require both kinds → Stop hook blocks a summary missing either.</li>
+      <li><b>What to publish (A):</b> skill carries the when/when-not nuance; "do NOT publish source/secrets" lives in all three text layers to prevent over-publishing.</li>
+    </ul>
+
+    <div class="flag"><b>Note — the "hard prerequisite" the workflow flagged is already done.</b> It worried the bridge emits the bare (404-ing) index URL. In fact PR #3 already wired the tokenized <code>?k=</code> link: publish + <code>list</code> return it (<code>api.ts</code>) and the bridge surfaces it (<code>index.ts</code> uses the server's <code>spaceUrl</code>). Verified. So the agent already shares a <em>working</em> index link — no Phase-0 blocker here.</div>
+
+    <div class="kick">Sketch — improved MCP <code>instructions</code> string</div>
+    <pre>Publish local files/folders to protocontent and share a tappable, live URL. Each
+agent thread is one persistent "space"; everything you publish lands there and the
+space page updates in real time as you republish.
+
+WHEN TO PUBLISH: any self-contained artifact a human would want to open in a
+browser — HTML reports, plans, dashboards, prototypes, generated docs, diagrams,
+screenshots, or a built static site. Do NOT publish repo source code, secrets, or
+files meant to be committed.
+
+ALWAYS, on every publish: show the returned markdown link to the user. To UPDATE an
+artifact as you iterate, call publish_html/publish_folder again with the SAME `name`
+— it republishes in place at the same URL (do not invent a new name). Use `keep` to
+stop expiry.
+
+AT THE END of your turn, when you've published anything: list both (1) the private
+session-index link (the space page, carrying a `?k=` token — the one link that shows
+everything) and (2) each artifact's direct link for the files you worked on. Get
+both in one call with `list`. Label which is private vs public.</pre>
+
+    <div class="kick">Sketch — <code>skills/publishing-artifacts/SKILL.md</code></div>
+    <pre><span class="c">---
+name: publishing-artifacts
+description: &gt;-
+  Publish shareable HTML artifacts to protocontent and share their live links.
+  Use whenever you create or update a self-contained, browser-openable artifact —
+  an HTML report, plan, dashboard, prototype, diagram, generated doc, screenshot,
+  or built static site — or when the user asks to share/publish/send a link to
+  something you made. Also use at end of task to surface all published links.
+---</span>
+
+# Publishing artifacts with protocontent
+
+## When to publish (and when not to)
+PUBLISH: HTML reports/plans/specs, dashboards, prototypes, generated docs,
+charts/diagrams, screenshots, a built static site (a folder).
+DO NOT: repo source, anything to be committed, secrets, large binaries.
+When unsure, publish a *rendered report* view, not raw code.
+
+## The workflow (every time)
+1. Publish via protocontent:publish_html / publish_folder. Pick a stable,
+   descriptive `name` (e.g. `auth-redesign-plan`).
+2. SHARE immediately: put the returned markdown link in your reply.
+3. ITERATE = UPDATE IN PLACE: revise → publish again with the SAME `name`
+   (same URL, live update). Never mint `plan-v2`/`plan-final`. `keep` to persist.
+
+## End-of-task summary (always BOTH kinds of link)
+End with a "Published" section, sourced from protocontent:list:
+  **Published**
+  - Session index (private, shows everything): &lt;space ?k= link&gt;
+  - &lt;artifact-name&gt;: &lt;direct public link&gt;
+The index link is PRIVATE (token-gated); per-artifact links are PUBLIC. Label them.</pre>
+
+    <div class="kick">Sketch — <code>AGENTS.md</code> snippet (portable, non-Claude agents)</div>
+    <pre>## Sharing artifacts (protocontent)
+When you build something a human would open in a browser — an HTML report, plan,
+dashboard, prototype, or built site — publish it with the protocontent MCP tools
+(publish_html / publish_folder) and share the returned link. To update it, publish
+again with the same `name`. At the end of a task, list both the session-index link
+(private) and each artifact's direct link. Do not publish repo source or secrets.</pre>
+
+    <div class="kick">Key risks</div>
+    <ul class="tight">
+      <li><b>Probabilistic layers can be ignored</b> — only the Stop hook makes the critical path deterministic; tune the skill <code>description</code> via observe-refine-test so it actually triggers.</li>
+      <li><b>Over-publishing</b> (source, scratch, every screenshot) — "do NOT publish source/secrets" in all text layers; hook scoped to self-contained artifacts only.</li>
+      <li><b>Stop-hook nags / loops / block-cap</b> — guard with <code>stop_hook_active</code>, the cheap changed-file pre-filter, per-user opt-out, "if in doubt, allow."</li>
+      <li><b>Name churn</b> → orphaned URLs / broken update-in-place — skill's one-stable-name rule.</li>
+      <li><b>Private <code>?k=</code> link leaks if forwarded</b> — label private vs public. <em>(Your call: surface the index link by default, or only on request?)</em></li>
+      <li><b>Non-Claude agents get no deterministic guarantee</b> — tool descriptions + AGENTS.md are the best-effort baseline; full stack is Claude Code.</li>
+    </ul>
+
+    <div class="kick">Build plan</div>
+    <div class="card">
+      <div class="phase"><div class="w">Phase 1</div><p>Rewrite the MCP <code>instructions</code> + front-load tool descriptions (share/update rule first). Ships to all MCP clients, no install. Measure share-rate before/after.</p></div>
+      <div class="phase"><div class="w">Phase 2</div><p>Author <code>skills/publishing-artifacts/SKILL.md</code>; tune the description via observe-refine-test (skill-creator) for trigger accuracy.</p></div>
+      <div class="phase"><div class="w">Phase 3</div><p>Add the scoped prompt-based <b>Stop hook</b> (command pre-filter + <code>stop_hook_active</code> guard); test the block-cap + false-positive rate on pure-code turns; opt-out.</p></div>
+      <div class="phase"><div class="w">Phase 4</div><p>Bundle into the <b>protocontent plugin</b> (<code>.mcp.json</code> + <code>skills/</code> + <code>hooks/</code>); AGENTS.md snippet in README; publish to a marketplace. Onboarding: <code>/plugin install protocontent</code>.</p></div>
+      <div class="phase"><div class="w">Phase 5</div><p>Document the AGENTS.md + tool-description path as the portable baseline for Cursor/Codex/others (best-effort, no Stop equivalent).</p></div>
+    </div>
+  </div>
+
+  <!-- ================= DECISIONS ================= -->
+  <div class="part">
+    <div class="partlabel">For you</div>
+    <h2>Decisions &amp; open questions</h2>
+    <ul class="tight">
+      <li><b>Badge: ship the viewer-shell at all?</b> It changes what <code>/&lt;name&gt;</code> returns (shell, not raw). Phase 1 (badge on the index only) is risk-free and may be enough to start — the viewer is the bigger swing.</li>
+      <li><b>Index link by default?</b> Should the agent always surface the private <code>?k=</code> index link, or only when asked? (It's a "shows everything" link — convenient but private.)</li>
+      <li><b>OAuth purpose.</b> Sign-in mainly unlocks <em>owner actions</em> (keep/unpublish/make-public) on content you already own via your token. Worth the 3p-cookie complexity now, or after there are real users?</li>
+      <li><b>Stop hook aggressiveness.</b> A real guarantee, but it nags. Default-on with opt-out, or opt-in?</li>
+      <li><b>Prereqs you hold:</b> the GitHub OAuth app + secrets (Part A), and the npm <code>0.2.0</code> publish so the improved instructions reach <code>npx</code> users (Part B Phase 1 ships via the bridge).</li>
+    </ul>
+  </div>
+
+  <footer>
+    <p><b>Sources</b> (from the research pass)</p>
+    <ol>
+      <li>MCP <a href="https://modelcontextprotocol.io/docs/concepts/tools" target="_blank" rel="noopener">tools</a> · Claude Code <a href="https://docs.anthropic.com/en/docs/claude-code/skills" target="_blank" rel="noopener">skills</a> · <a href="https://docs.anthropic.com/en/docs/claude-code/hooks" target="_blank" rel="noopener">hooks</a> · <a href="https://docs.anthropic.com/en/docs/claude-code/plugins" target="_blank" rel="noopener">plugins</a> · <a href="https://agents.md/" target="_blank" rel="noopener">agents.md</a></li>
+      <li>CSP <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/sandbox" target="_blank" rel="noopener">sandbox</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage" target="_blank" rel="noopener">postMessage</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite" target="_blank" rel="noopener">SameSite</a> · <a href="https://developers.google.com/privacy-sandbox/3pcd/chips" target="_blank" rel="noopener">CHIPS</a> · <a href="https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/" target="_blank" rel="noopener">WebKit ITP</a></li>
+    </ol>
+    <p style="margin-top:12px;opacity:.7">Scoped by a 6-agent ultracode pass · synthesis · companion to the <a href="how-it-works.html">how-it-works</a>, <a href="architecture-plan.html">architecture</a>, and <a href="next-steps.html">roadmap</a> docs. Generated as a self-contained <code>.html</code> artifact — the kind protocontent hosts.</p>
+  </footer>
+</div>
+<script>
+  function toggleTheme(){
+    const r=document.documentElement, dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('ttbtn').textContent=dark?'◐ Dark':'◑ Light';
+  }
+</script>
+</body>
+</html>
