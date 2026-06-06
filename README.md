@@ -34,11 +34,29 @@ claude mcp add protocontent -- npx -y protocontent
 
 Artifacts are **ephemeral** — published to a URL, not committed. The bridge keeps them out of git for you: on startup, if it's inside a git repo, it ensures `.protocontent/` is in your `.gitignore` (idempotent; opt out with `PROTOCONTENT_NO_GITIGNORE=1`). Stage anything you publish under `.protocontent/`.
 
+## Use it in Claude Code (plugin)
+
+For Claude Code, install the **plugin** — it bundles the MCP server plus a
+`publishing-artifacts` skill and a conservative Stop hook, so your agent publishes
+the right artifacts, shares the link on every publish, updates in place (same
+`name` → same URL), and ends with **both** the session-index and per-artifact links:
+
+```
+/plugin marketplace add jaronheard/protocontent
+/plugin install protocontent@protocontent
+```
+
+The Stop hook is fail-open and nudges at most once per turn; disable it with
+`PROTOCONTENT_DISABLE_STOP_HOOK=1`. For non-Claude agents (Cursor, Codex, Aider, …),
+copy the snippet in [`AGENTS.md`](AGENTS.md) into your project.
+
 ## Repo layout
 
 ```
 protocontent/          Cloudflare Worker — src/, wrangler.jsonc, schema.sql
 protocontent/bridge/   the npx stdio MCP bridge (published to npm as `protocontent`)
+plugin/                Claude Code plugin — MCP + publishing-artifacts skill + Stop hook
+AGENTS.md              portable "publish & share" snippet for non-Claude agents
 *.html                 design docs (also live on protocontent.app)
 ```
 
