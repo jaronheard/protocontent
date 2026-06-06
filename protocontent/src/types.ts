@@ -12,6 +12,9 @@ export interface Env {
   RL?: KVNamespace;
   /** Admin token for the moderation kill switch (Wrangler secret). Optional. */
   ADMIN_TOKEN?: string;
+  /** GitHub OAuth app credentials (Wrangler secrets) — sign-in opt-in. */
+  GITHUB_CLIENT_ID?: string;
+  GITHUB_CLIENT_SECRET?: string;
 }
 
 export interface ProjectRow {
