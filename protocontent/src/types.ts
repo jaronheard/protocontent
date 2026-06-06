@@ -21,6 +21,9 @@ export interface ProjectRow {
   id: string;
   token_hash: string;
   created_at: number;
+  github_user_id?: number | null;
+  github_login?: string | null;
+  github_avatar?: string | null;
 }
 
 export interface SpaceRow {

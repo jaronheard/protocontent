@@ -68,9 +68,9 @@
 
   <div class="eyebrow">protocontent · scoping · decision-ready</div>
   <h1>OAuth badge &amp; agent-workflow integration</h1>
-  <p class="lede">Two designs you asked me to scope overnight: a Vercel-style protocontent badge on shared content (around the sandbox constraint), and how a coding agent reliably uses protocontent. Researched + designed by a 6-agent ultracode pass; this is the synthesis for your call.</p>
+  <p class="lede">Two designs you asked me to scope overnight: how a coding agent reliably uses protocontent, and a Vercel-style protocontent badge on shared content (around the sandbox constraint). Researched + designed by a 6-agent ultracode pass; this is the synthesis for your call.</p>
   <div class="chips">
-    <span class="chip"><b>Type</b> · scoping, not built</span>
+    <span class="chip"><b>Status</b> · agent workflow: scoping · viewer shell + OAuth: shipped</span>
     <span class="chip"><b>Source</b> · ultracode (6 agents)</span>
     <span class="chip"><b>For</b> · your review &amp; go/no-go</span>
   </div>
@@ -78,62 +78,6 @@
   <!-- ================= PART A ================= -->
   <div class="part">
     <div class="partlabel">Part A</div>
-    <h2>The protocontent badge + OAuth</h2>
-    <p>Your vision: a small, dismissible protocontent badge overlaid on each shared artifact, like Vercel's preview toolbar — the entry point for sign-in and owner actions. The collision: artifacts are served with <code>CSP: sandbox</code> (opaque origin, no cookies/storage), so a badge injected <em>into</em> the artifact is identity-blind and network-isolated by construction. It literally cannot know who's signed in.</p>
-
-    <div class="rec"><b>Recommendation.</b> Build the badge as a <b>trusted protocontent "viewer" shell</b> that frames the unchanged artifact in a sandboxed iframe. It's the only way to put the badge on the surface people actually share — the artifact URL — without weakening the opaque-origin isolation. Sequence it so the risky part comes last.</p></div>
-
-    <div class="kick">Architecture</div>
-    <p>Split content serving by a query flag:</p>
-    <ul class="tight">
-      <li><code>&lt;space&gt;.protocontent.app/&lt;name&gt;</code> → a <b>trusted first-party viewer shell</b> (tight CSP, <code>frame-src 'self'</code>; the badge rendered in a <b>closed shadow DOM</b>).</li>
-      <li><code>&lt;space&gt;.protocontent.app/&lt;name&gt;?raw=1</code> → today's <b>exact artifact bytes, byte-for-byte</b>, with the unchanged <code>sandbox</code> opaque-origin CSP.</li>
-      <li>The viewer frames <code>?raw=1</code> in an <code>&lt;iframe sandbox="allow-scripts allow-forms allow-popups allow-modals allow-downloads"&gt;</code> (no <code>allow-same-origin</code>).</li>
-    </ul>
-    <p>The badge lives <b>only in the trusted parent</b>, never in the artifact — so it's genuinely trustworthy chrome, and the artifact stays an identity-blind, network-isolated passive payload (a cross-origin opaque child can't reach the parent DOM). <code>?raw=1</code> doubles as the embed escape hatch; bots / <code>Sec-Fetch-Dest: iframe</code> get raw directly to avoid double-framing.</p>
-
-    <div class="kick">Sign-in flow (popup, not redirect — keeps the artifact on screen)</div>
-    <div class="card">
-      <div class="step"><div class="n">1</div><div>Badge "Sign in" opens a <b>popup</b> to <code>api.protocontent.com/v1/auth/github</code> (the route exists; 503 until secrets set).</div></div>
-      <div class="step"><div class="n">2</div><div>GitHub → <code>/v1/auth/github/callback</code> sets a session cookie <b>only on <code>api.protocontent.com</code></b> (<code>SameSite=None; Secure; HttpOnly</code>), then <code>postMessage</code>s the opener and closes.</div></div>
-      <div class="step"><div class="n">3</div><div>Badge (validating <code>event.origin</code>) re-checks identity via <code>fetch('/v1/me?space=…', {credentials:'include'})</code> → <code>{login, avatarUrl, ownsThisSpace}</code>.</div></div>
-      <div class="step"><div class="n">4</div><div>First sign-in links <code>github_user_id → project_id</code> (closes the existing OAuth TODO). Owner actions reuse existing endpoints, now also cookie-auth: <b>keep · unpublish · make-index-public · open index (the <code>?k=</code> link) · history</b>. Report stays available to everyone.</div></div>
-    </div>
-
-    <div class="kick">How the sandbox stays intact</div>
-    <p>The opaque-origin CSP is preserved <b>byte-for-byte</b> by never putting the badge inside the artifact. Identity lives entirely on <code>api.protocontent.com</code>; <b><code>*.protocontent.app</code> stays cookie-free by design</b>, so the PSL-free cross-subdomain isolation is untouched. The trust signal to the user is the URL bar (a protocontent-served <code>*.protocontent.app</code> page), not the frame nesting. Token discipline: <b>never</b> postMessage a token into the iframe (sandbox requires <code>targetOrigin:'*'</code> = world-readable).</p>
-
-    <div class="kick">Alternatives considered</div>
-    <div class="scroll-x"><table class="t">
-      <tr><th>Option</th><th>Verdict</th></tr>
-      <tr><td><b>Badge on the index page only</b></td><td><span class="ok">Adopted as Phase 1</span> — perfect isolation (index is already first-party/non-sandboxed), but invisible on the shared artifact link. De-risks the whole auth loop with zero artifact-serving changes; not the final destination.</td></tr>
-      <tr><td><b>Inject badge into artifact bytes</b> (watermark)</td><td><span class="no">Dead on arrival</span> — CSP-blocked from auth, mutates user bytes, sits in attacker-controllable DOM (a hostile artifact could spoof/cover it).</td></tr>
-      <tr><td><b>Edge-gate auth at Cloudflare</b>, no in-page UI</td><td><span class="no">Rejected for the badge</span> — strong isolation but delivers no badge/branding. Reuse the idea only for the <code>?k=</code> private index.</td></tr>
-      <tr><td><b>Top-level redirect</b> sign-in</td><td><span class="no">Rejected</span> — blows away the artifact the user was looking at. Popup + postMessage instead.</td></tr>
-      <tr><td><b>CHIPS / partitioned cookie</b> as the primary 3p-cookie fix</td><td><span class="no">Doesn't solve it</span> — CHIPS partitions by top-level site (the artifact subdomain), so it wouldn't share across spaces. Keep as an attempt; rely on the popup-postMessage fallback.</td></tr>
-    </table></div>
-
-    <div class="kick">Key risks</div>
-    <div class="flag"><b>#1 — Third-party cookies.</b> <code>SameSite=None</code> cookies are deprecated/partitioned (Safari ITP, Chrome). A credentialed <code>/v1/me</code> fetch from <code>*.protocontent.app</code> is genuinely cross-site and may be blocked. <b>Mitigation (ship from day one):</b> degrade to the popup-postMessage result as short-lived in-memory identity per tab — the popup is first-party to <code>api</code> during the flow, so it always works.</div>
-    <ul class="tight">
-      <li><b>CORS must change carefully</b> — <code>/v1/me</code> + owner actions need exact-origin echo (not <code>*</code>) + <code>Allow-Credentials: true</code>, allowlisted to <code>*.protocontent.app</code>. Getting this wrong breaks auth or opens a CSRF/credential-leak hole.</li>
-      <li><b>Never set an auth cookie on <code>*.protocontent.app</code></b> (same registrable site as untrusted artifacts). Dismissal state may only be a non-identifying <code>localStorage</code> boolean.</li>
-      <li><b><code>/&lt;name&gt;</code> now returns a shell, not raw bytes</b> — keep <code>?raw=1</code> prominent for embed fidelity; serve bots/iframe-dest raw.</li>
-      <li><b>GitHub OAuth app + secrets</b> must be provisioned (your manual step) before Phase 0 can be tested end-to-end.</li>
-    </ul>
-
-    <div class="kick">Build plan</div>
-    <div class="card">
-      <div class="phase"><div class="w">Phase 0</div><p>OAuth/cookie/CORS plumbing on <code>api.protocontent.com</code>: finish the callback (set session cookie + postMessage+close), add <code>GET /v1/me?space=</code>, link <code>github_user_id→project_id</code> on first sign-in, add origin-echo-with-credentials CORS, accept cookie-auth on owner actions. No UI risk.</p></div>
-      <div class="phase"><div class="w">Phase 1</div><p>Build the collapsed-dot→toolbar badge on the <b>already-non-sandboxed index page</b>. Wire <code>/v1/me</code>, the sign-in popup, owner actions + Report. Validates the whole loop with zero artifact-serving changes.</p></div>
-      <div class="phase"><div class="w">Phase 2</div><p>The prize: split <code>handleContent</code> — <code>/&lt;name&gt;</code> → viewer shell (tight CSP), <code>?raw=1</code> → unchanged artifact. Render the <em>same</em> badge component (closed shadow DOM) framing <code>?raw=1</code>. Bot/iframe-dest bypass.</p></div>
-      <div class="phase"><div class="w">Phase 3</div><p>Polish: dismissal persistence (non-identifying boolean), corner memory, <code>⌘.</code> shortcut, "hide for this session," and the 3p-cookie popup-postMessage fallback + CHIPS attempt.</p></div>
-    </div>
-  </div>
-
-  <!-- ================= PART B ================= -->
-  <div class="part">
-    <div class="partlabel">Part B</div>
     <h2>How a coding agent reliably uses protocontent</h2>
     <p>Goal: an agent that, on its own, (A) publishes the artifacts worth publishing, (B) shares the link on every publish, (C) keeps them updated as it iterates, and (D) ends with <b>both</b> the session-index link and each worked-on file's link.</p>
 
@@ -239,16 +183,80 @@ again with the same `name`. At the end of a task, list both the session-index li
     </div>
   </div>
 
+  <!-- ================= PART B ================= -->
+  <div class="part">
+    <div class="partlabel">Part B</div>
+    <h2>The protocontent badge + OAuth</h2>
+    <p>Your vision: a small, dismissible protocontent badge overlaid on each shared artifact, like Vercel's preview toolbar — the entry point for sign-in and owner actions. The collision: artifacts are served with <code>CSP: sandbox</code> (opaque origin, no cookies/storage), so a badge injected <em>into</em> the artifact is identity-blind and network-isolated by construction. It literally cannot know who's signed in.</p>
+
+    <div class="rec"><b>Shipped &amp; live.</b> The badge is built as a <b>trusted first-party "viewer" shell</b> that frames the unchanged artifact in a sandboxed iframe — the only way to put the badge on the surface people actually share (the artifact URL) without weakening the opaque-origin isolation. The viewer shell, the live-version badge, and minimal GitHub OAuth are now <b>in production</b>. What's deferred: full owner <em>actions</em> in the badge and the heavier 3p-cookie hardening.</p></div>
+
+    <div class="kick">Architecture (shipped)</div>
+    <p>Content serving is split in <code>serve.ts</code> by who's asking, not a query flag:</p>
+    <ul class="tight">
+      <li>A <b>top-level browser navigation</b> to an artifact entry (<code>&lt;space&gt;.protocontent.app/&lt;name&gt;</code>, detected via <code>Sec-Fetch-Dest: document</code>) returns a <b>trusted first-party viewer shell</b>.</li>
+      <li><b>Everything else</b> — <code>?raw=1</code>, iframe/embed dests, sub-path assets, bots/unfurlers (no <code>Sec-Fetch-Dest</code>), and <code>HEAD</code> — returns the artifact bytes <b>byte-for-byte</b> with the unchanged opaque-origin <code>sandbox</code> CSP.</li>
+      <li>The framed raw entry sits at the <b>same base path</b>, so relative-asset resolution is preserved.</li>
+      <li>The shell frames the artifact in <code>&lt;iframe sandbox="allow-scripts allow-forms allow-popups allow-modals allow-downloads"&gt;</code> — <b>no <code>allow-same-origin</code></b>, opaque origin intact.</li>
+    </ul>
+    <p>The badge lives <b>only in the trusted shell</b>, never inside the artifact — so it's genuinely trustworthy chrome, and the artifact stays an identity-blind, network-isolated passive payload (a cross-origin opaque child can't reach the parent DOM). The shell's CSP is tight:</p>
+    <pre>default-src 'none'; frame-src 'self'; script-src 'nonce-…';
+style-src 'unsafe-inline'; img-src https://avatars.githubusercontent.com data:;
+connect-src 'self' https://api.protocontent.com;
+frame-ancestors 'none'; base-uri 'none'</pre>
+
+    <div class="kick">The badge (shipped)</div>
+    <p>Rendered in a <b>closed shadow DOM</b> in the trusted shell (never inside the artifact). It's a small collapsed dot that expands to a Vercel-toolbar-style bar; dismissible, persisted via a non-identifying <code>localStorage</code> boolean.</p>
+
+    <div class="kick">Live "new version" notification (shipped)</div>
+    <p>Reuses the existing <b>Space Durable Object WebSocket fanout</b>. The publish path now broadcasts an enriched <code>{type:"changed", name, version}</code>; the badge connects to <code>/__live</code> and shows a <b>"vN published · Reload"</b> pill when the artifact it's framing gets a new version. <code>/__live</code> is gated by the index token, so live updates require either a <code>?k=</code> in the URL or owner sign-in (see below).</p>
+
+    <div class="kick">Minimal OAuth (shipped)</div>
+    <div class="card">
+      <div class="step"><div class="n">1</div><div>GitHub sign-in via <b>popup</b> (<code>/v1/auth/github?popup=1</code>) and sign-out.</div></div>
+      <div class="step"><div class="n">2</div><div>A stateless, <b>HMAC-signed <code>pc_session</code> cookie</b> is set <b>host-only on <code>api.protocontent.com</code></b> (<code>HttpOnly; Secure; SameSite=None</code>) — it is <b>never</b> sent to <code>*.protocontent.app</code>, so the cookie-free artifact origin is untouched.</div></div>
+      <div class="step"><div class="n">3</div><div><code>GET /v1/me?space=&lt;id&gt;</code> (credentialed, exact-origin CORS echo) returns <code>{login, avatarUrl, ownsThisSpace, indexUrl, k}</code>. The index token (<code>k</code>) + index URL are returned <b>only to the verified owner</b> — never to anyone else.</div></div>
+      <div class="step"><div class="n">4</div><div><b>Ownership linking:</b> projects gained <code>github_user_id</code> / <code>github_login</code> / <code>github_avatar</code> columns; <code>POST /v1/claim</code> (requires <b>both</b> the project bearer token <b>and</b> the session cookie) links a GitHub identity to a project. The dashboard auto-claims on sign-in.</div></div>
+    </div>
+
+    <div class="kick">Ownership-gated index link (the key privacy decision)</div>
+    <p>The badge shows a <b>"↩ Session index"</b> link <b>only</b> when you arrived with a <code>?k=</code> token (you came from your own index) <b>or</b> you're the signed-in owner. Anonymous viewers of a bare artifact link get <b>neither</b> the index link nor the token — this closes the leak where a single shared artifact link would otherwise expose the whole session index.</p>
+
+    <div class="kick">How the sandbox stays intact</div>
+    <p>The opaque-origin CSP is preserved <b>byte-for-byte</b> by never putting the badge inside the artifact. Identity lives entirely on <code>api.protocontent.com</code>; <b><code>*.protocontent.app</code> stays cookie-free by design</b> (the <code>pc_session</code> cookie is host-only on <code>api</code>), so the PSL-free cross-subdomain isolation is untouched. The trust signal to the user is the URL bar (a protocontent-served <code>*.protocontent.app</code> page), not the frame nesting.</p>
+
+    <div class="kick">Known limitation (documented honestly)</div>
+    <div class="flag"><b>Third-party cookies.</b> The cross-site credentialed <code>/v1/me</code> fetch from <code>*.protocontent.app</code> relies on a <code>SameSite=None</code> cookie, which Safari ITP / Chrome 3p-cookie deprecation may block. In that case the badge degrades to <b>"Sign in"</b> and owner-detection won't stick — <b>but the <code>?k=</code> URL path (arriving from your index) always works everywhere</b>. A popup-postMessage re-check is wired but subject to the same 3p-cookie limits.</div>
+
+    <div class="kick">Alternatives considered</div>
+    <div class="scroll-x"><table class="t">
+      <tr><th>Option</th><th>Verdict</th></tr>
+      <tr><td><b>Trusted viewer shell</b> framing raw bytes</td><td><span class="ok">Shipped</span> — the badge on the shared artifact URL, opaque-origin isolation intact. Split is by <code>Sec-Fetch-Dest</code>, so embeds/bots/assets still get raw bytes byte-for-byte.</td></tr>
+      <tr><td><b>Inject badge into artifact bytes</b> (watermark)</td><td><span class="no">Dead on arrival</span> — CSP-blocked from auth, mutates user bytes, sits in attacker-controllable DOM (a hostile artifact could spoof/cover it).</td></tr>
+      <tr><td><b>Edge-gate auth at Cloudflare</b>, no in-page UI</td><td><span class="no">Rejected for the badge</span> — strong isolation but delivers no badge/branding. The <code>?k=</code> private index keeps the edge-gate idea.</td></tr>
+      <tr><td><b>Top-level redirect</b> sign-in</td><td><span class="no">Rejected</span> — blows away the artifact the user was looking at. Popup + postMessage instead.</td></tr>
+      <tr><td><b>CHIPS / partitioned cookie</b> as the primary 3p-cookie fix</td><td><span class="no">Doesn't solve it</span> — CHIPS partitions by top-level site (the artifact subdomain), so it wouldn't share across spaces. Deferred as an attempt; the <code>?k=</code> URL path is the reliable everywhere-fallback.</td></tr>
+    </table></div>
+
+    <div class="kick">Build plan</div>
+    <div class="card">
+      <div class="phase"><div class="w"><span class="ok">Shipped</span></div><p><b>OAuth / identity plumbing</b> on <code>api.protocontent.com</code>: GitHub sign-in/out popup, <code>GET /v1/me?space=</code>, the HMAC-signed host-only <code>pc_session</code> cookie, exact-origin-echo-with-credentials CORS, <code>POST /v1/claim</code>, and the <code>github_user_id</code>/<code>github_login</code>/<code>github_avatar</code> ownership columns.</p></div>
+      <div class="phase"><div class="w"><span class="ok">Shipped</span></div><p><b>Viewer shell + badge:</b> the <code>Sec-Fetch-Dest</code>-based split in <code>serve.ts</code> (shell vs. byte-for-byte raw), the closed-shadow-DOM badge, the live "vN published · Reload" pill over <code>/__live</code>, and the ownership-gated <code>?k=</code> session-index link.</p></div>
+      <div class="phase"><div class="w"><span class="no">Next</span></div><p><b>Full owner actions in the badge</b> via the cookie session: keep · unpublish · make-index-public · history, surfaced inline for the signed-in owner.</p></div>
+      <div class="phase"><div class="w"><span class="no">Next</span></div><p><b>3p-cookie hardening:</b> a real CHIPS attempt + a richer popup-postMessage fallback so owner-detection sticks on Safari ITP / Chrome without a <code>?k=</code>.</p></div>
+    </div>
+  </div>
+
   <!-- ================= DECISIONS ================= -->
   <div class="part">
     <div class="partlabel">For you</div>
     <h2>Decisions &amp; open questions</h2>
     <ul class="tight">
-      <li><b>Badge: ship the viewer-shell at all?</b> It changes what <code>/&lt;name&gt;</code> returns (shell, not raw). Phase 1 (badge on the index only) is risk-free and may be enough to start — the viewer is the bigger swing.</li>
-      <li><b>Index link by default?</b> Should the agent always surface the private <code>?k=</code> index link, or only when asked? (It's a "shows everything" link — convenient but private.)</li>
-      <li><b>OAuth purpose.</b> Sign-in mainly unlocks <em>owner actions</em> (keep/unpublish/make-public) on content you already own via your token. Worth the 3p-cookie complexity now, or after there are real users?</li>
+      <li><b>Badge: ship the viewer-shell at all?</b> <span class="ok">Resolved — shipped.</span> A top-level navigation to <code>/&lt;name&gt;</code> returns the trusted shell; everything else (embeds, bots, assets, <code>?raw=1</code>) gets the artifact bytes byte-for-byte.</li>
+      <li><b>Index link by default?</b> <span class="ok">Resolved — gated.</span> The <code>?k=</code> session-index link is shown only to the signed-in owner or someone arriving with a <code>?k=</code> token; never to an anonymous bare-link viewer.</li>
+      <li><b>OAuth purpose.</b> <span class="ok">Resolved.</span> Minimal sign-in/out + the ownership-gated index link shipped. Full owner <em>actions</em> in the badge (keep/unpublish/make-public/history via the cookie session) are deferred.</li>
       <li><b>Stop hook aggressiveness.</b> A real guarantee, but it nags. Default-on with opt-out, or opt-in?</li>
-      <li><b>Prereqs you hold:</b> the GitHub OAuth app + secrets (Part A), and the npm <code>0.2.0</code> publish so the improved instructions reach <code>npx</code> users (Part B Phase 1 ships via the bridge).</li>
+      <li><b>Prereqs:</b> the GitHub OAuth app + secrets (Part B) are provisioned and OAuth is live; the bridge <code>0.2.0</code> is published, but the improved instructions / skill / hook / plugin that reach <code>npx</code> users (Part A) are <b>not shipped yet</b>.</li>
     </ul>
   </div>
 

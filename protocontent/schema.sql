@@ -2,9 +2,12 @@
 -- Apply with: wrangler d1 execute protocontent --remote --file=schema.sql
 
 CREATE TABLE IF NOT EXISTS projects (
-  id          TEXT PRIMARY KEY,
-  token_hash  TEXT UNIQUE,
-  created_at  INTEGER
+  id              TEXT PRIMARY KEY,
+  token_hash      TEXT UNIQUE,
+  created_at      INTEGER,
+  github_user_id  INTEGER,
+  github_login    TEXT,
+  github_avatar   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS spaces (
@@ -55,3 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_space_id  ON artifacts (space_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_expires   ON artifacts (expires_at);
 CREATE INDEX IF NOT EXISTS idx_files_artifact_id   ON files (artifact_id);
 CREATE INDEX IF NOT EXISTS idx_files_artifact_ver  ON files (artifact_id, version);
+
+-- Migration (run once on existing DBs; ignore "duplicate column" errors):
+-- ALTER TABLE projects ADD COLUMN github_user_id INTEGER;
+-- ALTER TABLE projects ADD COLUMN github_login TEXT;
+-- ALTER TABLE projects ADD COLUMN github_avatar TEXT;

@@ -18,8 +18,24 @@ export class Space extends DurableObject<Env> {
     const url = new URL(request.url);
 
     // Internal notify hook: publish path calls this to fan out a change event.
+    // An OPTIONAL JSON body `{name?, version?}` enriches the broadcast so the
+    // viewer-shell badge can decide whether the change is relevant to the
+    // artifact it's framing. Backward-compatible: no body -> name/version
+    // undefined -> still semantically `{type:"changed"}`.
     if (url.pathname === "/notify" && request.method === "POST") {
-      this.broadcast({ type: "changed" });
+      let name: string | undefined, version: number | undefined;
+      try {
+        const body = (await request.json().catch(() => null)) as
+          | { name?: string; version?: number }
+          | null;
+        if (body) {
+          name = typeof body.name === "string" ? body.name : undefined;
+          version = typeof body.version === "number" ? body.version : undefined;
+        }
+      } catch {
+        /* malformed body: fall back to a bare change event */
+      }
+      this.broadcast({ type: "changed", name, version });
       return new Response(null, { status: 204 });
     }
 

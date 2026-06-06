@@ -6,6 +6,10 @@ import {
   ApiError,
   createProject,
   projectForToken,
+  getProject,
+  getSpace,
+  linkProjectGithub,
+  countProjectSpaces,
   ensureSpace,
   requireOwnedSpace,
   publishArtifact,
@@ -24,12 +28,24 @@ import {
 import { json, errorJson, slugify, genSpaceId } from "./util";
 import { DASHBOARD_HTML } from "./dashboard";
 
-/** Notify the space's Durable Object so it broadcasts to live viewers. */
-async function notifySpace(env: Env, spaceId: string): Promise<void> {
+/**
+ * Notify the space's Durable Object so it broadcasts to live viewers. Sends the
+ * affected artifact name + version so the DO can describe the change. Strictly
+ * best-effort: never throws (a failed fanout must not fail a publish).
+ */
+async function notifySpace(
+  env: Env,
+  spaceId: string,
+  artifact: { name: string; version?: number },
+): Promise<void> {
   try {
     const id = env.SPACE.idFromName(spaceId);
     const stub = env.SPACE.get(id);
-    await stub.fetch("https://do/notify", { method: "POST" });
+    await stub.fetch("https://do/notify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: artifact.name, version: artifact.version ?? 0 }),
+    });
   } catch {
     // Live fanout is best-effort; never fail a publish because of it.
   }
@@ -49,6 +65,162 @@ async function requireProject(request: Request, env: Env): Promise<{ projectId: 
   const project = await projectForToken(env, token);
   if (!project) throw new ApiError("invalid token", 401);
   return { projectId: project.id, token };
+}
+
+// --- CORS -------------------------------------------------------------------
+
+const SESSION_COOKIE = "pc_session";
+const SESSION_MAX_AGE = 2592000; // 30 days, in seconds.
+const SESSION_MAX_AGE_MS = SESSION_MAX_AGE * 1000;
+
+/**
+ * Is this an origin we trust for credentialed (cookie-bearing) requests?
+ * Any *.protocontent.app artifact origin, plus the api/marketing origins.
+ */
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return (
+    /^https:\/\/([a-z0-9-]+\.)?protocontent\.app$/.test(origin) ||
+    origin === "https://api.protocontent.com" ||
+    origin === "https://protocontent.com"
+  );
+}
+
+/**
+ * CORS headers for an API response. The bearer-token API keeps wildcard CORS;
+ * the credentialed endpoints (/v1/me, /v1/auth/logout, /v1/claim) must echo the
+ * exact request Origin and allow credentials (cookies). A wildcard origin is
+ * never sent together with credentials (the browser would reject it).
+ */
+function corsHeaders(
+  request: Request,
+  { credentials }: { credentials?: boolean } = {},
+): Record<string, string> {
+  const origin = request.headers.get("origin") || request.headers.get("Origin");
+  const headers: Record<string, string> = {
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "authorization, content-type",
+  };
+  if (credentials && isAllowedOrigin(origin)) {
+    headers["access-control-allow-origin"] = origin as string;
+    headers["access-control-allow-credentials"] = "true";
+    headers["vary"] = "Origin";
+  } else {
+    headers["access-control-allow-origin"] = "*";
+  }
+  return headers;
+}
+
+// --- Session cookie (stateless, HMAC-signed) --------------------------------
+
+interface SessionPayload {
+  uid: number;
+  login: string;
+  avatar: string;
+  exp: number; // ms epoch
+}
+
+/** UTF-8 + url-safe base64 encode (no padding). */
+function b64urlEncode(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Inverse of b64urlEncode → original UTF-8 string. */
+function b64urlDecode(b64url: string): string {
+  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/** Import the session HMAC key, derived from the (stable) GitHub client secret. */
+async function sessionKey(env: Env): Promise<CryptoKey> {
+  const secret = env.GITHUB_CLIENT_SECRET || "";
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+}
+
+/** HMAC-SHA256 of a string with the session key, returned as url-safe base64. */
+async function hmacB64url(message: string, env: Env): Promise<string> {
+  const key = await sessionKey(env);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
+  const bytes = new Uint8Array(sig);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Constant-time string compare (avoid early-exit timing leaks). */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Produce a signed `pc_session` token for a payload. */
+async function signSession(payload: SessionPayload, env: Env): Promise<string> {
+  const body = b64urlEncode(JSON.stringify(payload));
+  const sig = await hmacB64url(body, env);
+  return `${body}.${sig}`;
+}
+
+/** Read the `pc_session` cookie value from a request, or null. */
+function sessionCookie(request: Request): string | null {
+  const header = request.headers.get("cookie") || request.headers.get("Cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq === -1) continue;
+    const name = part.slice(0, eq).trim();
+    if (name === SESSION_COOKIE) return part.slice(eq + 1).trim();
+  }
+  return null;
+}
+
+/**
+ * Verify the `pc_session` cookie: recompute the HMAC (constant-time compare)
+ * and check expiry. Returns the identity, or null if absent/invalid/expired.
+ */
+async function verifySession(
+  request: Request,
+  env: Env,
+): Promise<{ uid: number; login: string; avatar: string } | null> {
+  const cookie = sessionCookie(request);
+  if (!cookie) return null;
+  const dot = cookie.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const body = cookie.slice(0, dot);
+  const sig = cookie.slice(dot + 1);
+  const expected = await hmacB64url(body, env);
+  if (!timingSafeEqual(sig, expected)) return null;
+  let payload: SessionPayload;
+  try {
+    payload = JSON.parse(b64urlDecode(body)) as SessionPayload;
+  } catch {
+    return null;
+  }
+  if (
+    typeof payload.uid !== "number" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    return null;
+  }
+  return {
+    uid: payload.uid,
+    login: typeof payload.login === "string" ? payload.login : "",
+    avatar: typeof payload.avatar === "string" ? payload.avatar : "",
+  };
 }
 
 // --- Abuse limits ----------------------------------------------------------
@@ -92,14 +264,14 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
 
-  // CORS preflight.
+  // CORS preflight. Echo the origin + allow credentials for trusted origins so
+  // preflight for the credentialed endpoints (/v1/me, /v1/auth/logout,
+  // /v1/claim) succeeds; falls back to wildcard for the bearer-token API.
   if (request.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
       headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-methods": "GET, POST, OPTIONS",
-        "access-control-allow-headers": "authorization, content-type",
+        ...corsHeaders(request, { credentials: true }),
         "access-control-max-age": "86400",
       },
     });
@@ -124,6 +296,18 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
     }
     if (path === "/v1/auth/github/callback" && request.method === "GET") {
       return await handleAuthGithubCallback(request, env);
+    }
+
+    // Credentialed identity / session endpoints (cookie-authenticated; CORS
+    // echoes the request origin for *.protocontent.app + the control origins).
+    if (path === "/v1/me" && request.method === "GET") {
+      return await handleMe(request, env);
+    }
+    if (path === "/v1/auth/logout" && request.method === "POST") {
+      return await handleLogout(request, env);
+    }
+    if (path === "/v1/claim" && request.method === "POST") {
+      return await handleClaim(request, env);
     }
 
     // 1. POST /v1/projects (no auth) -> mint anonymous project + token.
@@ -243,7 +427,7 @@ async function handlePublish(request: Request, env: Env, ctx: ExecutionContext):
 
   // Notify live viewers in the background — don't block the publish response on
   // a cold Durable Object wake-up (~700ms on first hit to an idle space).
-  ctx.waitUntil(notifySpace(env, spaceId));
+  ctx.waitUntil(notifySpace(env, spaceId, { name: body.name, version: result.version }));
 
   // The editToken IS the bearer token the caller already holds (scopes edits
   // to this project). Surface it for convenience.
@@ -345,10 +529,14 @@ async function handleAuthGithub(request: Request, env: Env): Promise<Response> {
     return errorJson("sign-in not configured", 503);
   }
   const url = new URL(request.url);
+  // Thread the popup flag through `state` so the callback knows whether to
+  // postMessage+close (popup) or 302 back to the dashboard.
+  const popup = url.searchParams.get("popup") === "1";
   const authorize = new URL("https://github.com/login/oauth/authorize");
   authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
   authorize.searchParams.set("redirect_uri", `${url.origin}/v1/auth/github/callback`);
   authorize.searchParams.set("scope", "read:user");
+  authorize.searchParams.set("state", popup ? "popup" : "dashboard");
   return Response.redirect(authorize.toString(), 302);
 }
 
@@ -376,13 +564,110 @@ async function handleAuthGithubCallback(request: Request, env: Env): Promise<Res
       accept: "application/vnd.github+json",
     },
   });
-  const user = (await userRes.json()) as { login?: string };
+  const user = (await userRes.json()) as { id?: number; login?: string; avatar_url?: string };
+  if (typeof user.id !== "number") return errorJson("github user fetch failed", 502);
   const login = (user.login || "unknown").replace(/[^a-zA-Z0-9_-]/g, "");
-  // TODO: link this GitHub identity to a project to claim its spaces.
-  return new Response(
-    `<!doctype html><meta charset=utf-8><body style="font-family:system-ui;padding:3rem;max-width:32rem;margin:auto"><h1>Signed in as ${login}</h1><p>GitHub sign-in is wired up. Linking your identity to a project (to claim spaces without pasting a token) is the next step.</p><p><a href="/">&larr; back to the dashboard</a></p></body>`,
-    { headers: { "content-type": "text/html; charset=utf-8" } },
+  const avatar = typeof user.avatar_url === "string" ? user.avatar_url : "";
+
+  // Mint a stateless, signed session cookie on the api origin. Host-only (no
+  // Domain) so it is NEVER sent to *.protocontent.app artifact origins; the
+  // viewer badge reads identity via a credentialed GET /v1/me to this origin.
+  const token = await signSession(
+    { uid: user.id, login, avatar, exp: Date.now() + SESSION_MAX_AGE_MS },
+    env,
   );
+  const setCookie =
+    `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${SESSION_MAX_AGE}`;
+
+  const popup = new URL(request.url).searchParams.get("state") === "popup";
+  if (popup) {
+    return new Response(
+      `<!doctype html><meta charset=utf-8><body style="font-family:system-ui;padding:3rem;max-width:32rem;margin:auto"><script>try{window.opener&&window.opener.postMessage({type:'protocontent-auth',ok:true},'*');}catch(e){}window.close();</script><h1>Signed in as ${login}</h1><p>You can close this window.</p></body>`,
+      { headers: { "content-type": "text/html; charset=utf-8", "set-cookie": setCookie } },
+    );
+  }
+  // Dashboard flow: cookie now set, bounce back to the control plane.
+  return new Response(null, {
+    status: 302,
+    headers: { location: "https://api.protocontent.com/", "set-cookie": setCookie },
+  });
+}
+
+/**
+ * GET /v1/me?space=<spaceId> — credentialed identity probe for the viewer badge.
+ * Signed out → all null/false. Signed in → login/avatar from the session, plus
+ * ownership of `space`. The space's index token (k) + indexUrl are returned ONLY
+ * to the owner; never to anyone else.
+ */
+async function handleMe(request: Request, env: Env): Promise<Response> {
+  const headers = corsHeaders(request, { credentials: true });
+  const session = await verifySession(request, env);
+  const spaceId = new URL(request.url).searchParams.get("space");
+
+  const body: {
+    login: string | null;
+    avatarUrl: string | null;
+    ownsThisSpace: boolean;
+    indexUrl: string | null;
+    k: string | null;
+  } = {
+    login: session ? session.login || null : null,
+    avatarUrl: session ? session.avatar || null : null,
+    ownsThisSpace: false,
+    indexUrl: null,
+    k: null,
+  };
+
+  if (session && spaceId) {
+    const space = await getSpace(env, spaceId);
+    if (space) {
+      const project = await getProject(env, space.project_id);
+      if (project && project.github_user_id != null && project.github_user_id === session.uid) {
+        body.ownsThisSpace = true;
+        body.k = space.index_token ?? null;
+        body.indexUrl = space.index_token
+          ? `${spaceOrigin(spaceId)}/?k=${space.index_token}`
+          : `${spaceOrigin(spaceId)}/`;
+      }
+    }
+  }
+
+  return json(body, 200, headers);
+}
+
+/** POST /v1/auth/logout — clear the session cookie. 204, credentialed CORS. */
+async function handleLogout(request: Request, env: Env): Promise<Response> {
+  void env;
+  const headers = corsHeaders(request, { credentials: true });
+  return new Response(null, {
+    status: 204,
+    headers: {
+      ...headers,
+      "set-cookie": `${SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=None`,
+    },
+  });
+}
+
+/**
+ * POST /v1/claim — link the signed-in GitHub identity to the bearer token's
+ * project, so the owner can later claim its spaces via the cookie alone.
+ * Requires BOTH a valid bearer token AND a valid pc_session cookie.
+ */
+async function handleClaim(request: Request, env: Env): Promise<Response> {
+  const headers = corsHeaders(request, { credentials: true });
+  // Bearer first (mirrors the rest of the API), then session.
+  const { projectId } = await requireProject(request, env);
+  const session = await verifySession(request, env);
+  if (!session) {
+    return json({ error: "sign in first" }, 401, headers);
+  }
+  await linkProjectGithub(env, projectId, {
+    uid: session.uid,
+    login: session.login,
+    avatar: session.avatar,
+  });
+  const spaces = await countProjectSpaces(env, projectId);
+  return json({ ok: true, spaces }, 200, headers);
 }
 
 async function handleHistory(
@@ -415,7 +700,7 @@ async function handleUnpublish(
   await requireOwnedSpace(env, spaceId, projectId);
   const ok = await unpublishArtifact(env, spaceId, name);
   if (!ok) throw new ApiError("artifact not found", 404);
-  ctx.waitUntil(notifySpace(env, spaceId));
+  ctx.waitUntil(notifySpace(env, spaceId, { name, version: 0 }));
   return json({ ok: true });
 }
 
