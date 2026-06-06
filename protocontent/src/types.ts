@@ -20,6 +20,7 @@ export interface SpaceRow {
   id: string;
   project_id: string;
   label: string | null;
+  index_token: string | null;
   created_at: number;
 }
 

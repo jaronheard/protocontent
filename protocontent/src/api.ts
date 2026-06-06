@@ -132,7 +132,7 @@ async function handlePublish(request: Request, env: Env, ctx: ExecutionContext):
   const spaceId = (body.spaceId && String(body.spaceId)) || genSpaceId();
 
   // Create or verify the space (owned by this token's project).
-  await ensureSpace(env, spaceId, projectId, body.spaceLabel);
+  const space = await ensureSpace(env, spaceId, projectId, body.spaceLabel);
 
   const result = await publishArtifact(env, {
     spaceId,
@@ -149,10 +149,16 @@ async function handlePublish(request: Request, env: Env, ctx: ExecutionContext):
 
   // The editToken IS the bearer token the caller already holds (scopes edits
   // to this project). Surface it for convenience.
+  // The session index is private: surface it with its ?k token so the owner can
+  // open the live thread page. Individual artifact links (result.url) stay open.
+  const spaceUrl = space.index_token
+    ? `${spaceOrigin(spaceId)}/?k=${space.index_token}`
+    : result.spaceUrl;
+
   return json(
     {
       url: result.url,
-      spaceUrl: result.spaceUrl,
+      spaceUrl,
       markdown: result.markdown,
       editToken: token,
       expiresAt: result.expiresAt,
@@ -164,7 +170,7 @@ async function handlePublish(request: Request, env: Env, ctx: ExecutionContext):
 
 async function handleList(request: Request, env: Env, spaceId: string): Promise<Response> {
   const { projectId } = await requireProject(request, env);
-  await requireOwnedSpace(env, spaceId, projectId);
+  const space = await requireOwnedSpace(env, spaceId, projectId);
   const rows = await listArtifacts(env, spaceId);
   const origin = spaceOrigin(spaceId);
   const artifacts = rows.map((a) => ({
@@ -173,7 +179,8 @@ async function handleList(request: Request, env: Env, spaceId: string): Promise<
     expiresAt: a.expires_at,
     version: a.latest_version,
   }));
-  return json({ artifacts });
+  const spaceUrl = space.index_token ? `${origin}/?k=${space.index_token}` : `${origin}/`;
+  return json({ artifacts, spaceUrl });
 }
 
 async function handleHistory(

@@ -321,7 +321,7 @@ async function main(): Promise<void> {
     async () => {
       try {
         const res = await listSpace(config);
-        const spaceUrl = `https://${config.spaceId}.protocontent.app`;
+        const spaceUrl = res.spaceUrl || `https://${config.spaceId}.protocontent.app`;
         if (!res.artifacts || res.artifacts.length === 0) {
           return textResult(
             `No artifacts published yet in space ${config.spaceId}.\n` +

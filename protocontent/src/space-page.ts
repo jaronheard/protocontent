@@ -145,7 +145,7 @@ export function renderSpacePage(
   }
 
   function refresh() {
-    return fetch('/__list', { headers: { 'accept': 'application/json' } })
+    return fetch('/__list' + location.search, { headers: { 'accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) { render(data.artifacts || []); })
       .catch(function () { /* keep last render */ });
@@ -164,7 +164,7 @@ export function renderSpacePage(
   function connect() {
     try {
       var proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(proto + '://' + location.host + '/__live');
+      ws = new WebSocket(proto + '://' + location.host + '/__live' + location.search);
     } catch (e) { setStatus(false); scheduleReconnect(); return; }
     ws.addEventListener('open', function () { setStatus(true); retry = 0; });
     ws.addEventListener('message', function () { refresh(); });
