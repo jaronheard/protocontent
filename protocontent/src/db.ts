@@ -62,7 +62,7 @@ export async function projectForToken(env: Env, token: string): Promise<ProjectR
 export async function getSpace(env: Env, spaceId: string): Promise<SpaceRow | null> {
   return (
     (await env.DB.prepare(
-      `SELECT id, project_id, label, index_token, blocked, created_at FROM spaces WHERE id = ?`,
+      `SELECT id, project_id, label, index_token, blocked, public_index, created_at FROM spaces WHERE id = ?`,
     )
       .bind(spaceId)
       .first<SpaceRow>()) ?? null
@@ -106,6 +106,7 @@ export async function ensureSpace(
     label: label ?? null,
     index_token: genToken(16),
     blocked: 0,
+    public_index: 0,
     created_at: Date.now(),
   };
   await env.DB.prepare(
@@ -136,6 +137,18 @@ export async function setSpaceBlocked(
 ): Promise<boolean> {
   const res = await env.DB.prepare(`UPDATE spaces SET blocked = ? WHERE id = ?`)
     .bind(blocked ? 1 : 0, spaceId)
+    .run();
+  return (res.meta?.changes ?? 0) > 0;
+}
+
+/** Make a space's session index publicly viewable (true) or private again (false). */
+export async function setSpacePublicIndex(
+  env: Env,
+  spaceId: string,
+  pub: boolean,
+): Promise<boolean> {
+  const res = await env.DB.prepare(`UPDATE spaces SET public_index = ? WHERE id = ?`)
+    .bind(pub ? 1 : 0, spaceId)
     .run();
   return (res.meta?.changes ?? 0) > 0;
 }

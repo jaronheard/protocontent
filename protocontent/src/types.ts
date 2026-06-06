@@ -29,6 +29,7 @@ export interface SpaceRow {
   label: string | null;
   index_token: string | null;
   blocked: number | null;
+  public_index: number | null;
   created_at: number;
 }
 
