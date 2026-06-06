@@ -72,7 +72,15 @@ Each running bridge process owns one **space** — a DNS-safe id like
 lifetime. When `CLAUDE_SESSION_ID` is present the id is derived deterministically
 from it; otherwise it's random. A `spaceLabel` is derived from the current working
 directory's basename. Everything you publish in a session lands in the same space,
-served at `https://<spaceId>.protocontent.com`, which updates live.
+served at `https://<spaceId>.protocontent.app`, which updates live.
+
+### Keeping artifacts out of git
+
+protocontent artifacts are **ephemeral** — you publish them to a URL, you don't
+commit them. On startup the bridge makes a best-effort, idempotent check: if it's
+running inside a git repo, it ensures `.protocontent/` is in your `.gitignore`.
+Stage anything you publish under `.protocontent/` and it stays out of version
+control automatically. Opt out with `PROTOCONTENT_NO_GITIGNORE=1`.
 
 ## Tools
 

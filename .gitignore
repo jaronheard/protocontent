@@ -22,3 +22,6 @@ npm-debug.log*
 
 # stray scratch from early prototyping
 hello-world.html
+
+# protocontent — ephemeral published artifacts (not source)
+.protocontent/

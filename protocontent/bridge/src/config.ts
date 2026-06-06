@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { generateSpaceId, slugify } from "./util.js";
+import { generateSpaceId, slugify, ensureGitignore } from "./util.js";
 
 export const DEFAULT_API_BASE = "https://api.protocontent.com";
 
@@ -178,5 +178,7 @@ export async function loadConfig(): Promise<BridgeConfig> {
   const apiBase = getApiBase();
   const token = await resolveToken(apiBase);
   const { spaceId, spaceLabel } = await computeSpace();
+  // Keep ephemeral published artifacts out of git (best-effort, idempotent).
+  await ensureGitignore(process.env.CLAUDE_PROJECT_DIR || process.cwd());
   return { apiBase, token, spaceId, spaceLabel };
 }

@@ -32,6 +32,8 @@ claude mcp add protocontent -- npx -y protocontent
 
 …or add `npx -y protocontent` as a stdio MCP server in your agent's config. Zero config — it mints an anonymous project on first run and gives back a tappable link plus a live session URL.
 
+Artifacts are **ephemeral** — published to a URL, not committed. The bridge keeps them out of git for you: on startup, if it's inside a git repo, it ensures `.protocontent/` is in your `.gitignore` (idempotent; opt out with `PROTOCONTENT_NO_GITIGNORE=1`). Stage anything you publish under `.protocontent/`.
+
 ## Repo layout
 
 ```
