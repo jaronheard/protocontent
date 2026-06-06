@@ -1,0 +1,38 @@
+{
+  "name": "protocontent",
+  "version": "0.1.0",
+  "description": "Co-located stdio MCP bridge for protocontent — read local files and publish them to the protocontent HTTP API.",
+  "type": "module",
+  "bin": {
+    "protocontent": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "protocontent",
+    "publishing",
+    "stdio"
+  ],
+  "author": "Jaron Heard",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}

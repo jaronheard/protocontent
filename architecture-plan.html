@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>protocontent — Architecture Plan</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1a17; --muted:#6b6960;
+    --line:#e7e3d8; --accent:#c2410c; --accent-soft:#fff1e9;
+    --good:#15803d; --good-soft:#e7f6ec; --warn:#b45309; --warn-soft:#fdf3e3;
+    --code-bg:#1f1d1a; --code-ink:#f3efe6; --chip:#f1eee5;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(40,30,10,.06);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg:#16140f; --panel:#1f1c16; --ink:#f1ede3; --muted:#a7a194;
+    --line:#332e24; --accent:#fb923c; --accent-soft:#2a1c11;
+    --good:#4ade80; --good-soft:#13241a; --warn:#fbbf24; --warn-soft:#241c0c;
+    --code-bg:#0d0c0a; --code-ink:#f3efe6; --chip:#272319;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--chip);
+    padding:.12em .4em;border-radius:5px;border:1px solid var(--line)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;
+    display:grid;grid-template-columns:230px 1fr;gap:48px}
+  @media(max-width:920px){.wrap{grid-template-columns:1fr;gap:0}}
+
+  /* sidebar */
+  aside{position:sticky;top:0;align-self:start;height:100vh;
+    padding:32px 0;overflow-y:auto}
+  @media(max-width:920px){aside{display:none}}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;
+    font-size:18px;letter-spacing:-.01em;margin-bottom:4px}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 4px var(--accent-soft)}
+  .brand small{display:block;font-weight:500;font-size:12px;color:var(--muted);
+    margin-left:21px;letter-spacing:0}
+  nav.toc{margin-top:26px;font-size:13.5px}
+  nav.toc a{display:block;color:var(--muted);padding:5px 0 5px 12px;
+    border-left:2px solid var(--line);line-height:1.35}
+  nav.toc a:hover{color:var(--ink);text-decoration:none;border-color:var(--muted)}
+  nav.toc a.active{color:var(--accent);border-color:var(--accent);font-weight:600}
+  .toc-num{font-variant-numeric:tabular-nums;color:var(--accent);
+    font-weight:600;margin-right:7px;font-size:12px}
+
+  /* main */
+  main{padding:48px 0 120px;min-width:0}
+  .hero{margin-bottom:14px}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--accent)}
+  h1{font-size:40px;line-height:1.08;letter-spacing:-.025em;margin:.3em 0 .25em;font-weight:800}
+  h1 .tld{color:var(--muted);font-weight:600}
+  .lede{font-size:18.5px;color:var(--muted);max-width:62ch;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 8px}
+  .chip{font-size:12.5px;background:var(--chip);border:1px solid var(--line);
+    color:var(--muted);padding:4px 11px;border-radius:999px;font-weight:500}
+  .chip b{color:var(--ink);font-weight:600}
+
+  section{margin-top:54px;scroll-margin-top:24px}
+  h2{font-size:14px;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--accent);font-weight:700;margin:0 0 4px;
+    display:flex;align-items:baseline;gap:10px}
+  h2 .n{font-variant-numeric:tabular-nums;opacity:.55}
+  h2 + .h2sub{font-size:25px;font-weight:750;letter-spacing:-.02em;
+    margin:0 0 18px;line-height:1.2;color:var(--ink)}
+  h3{font-size:17px;font-weight:700;margin:26px 0 6px;letter-spacing:-.01em}
+  p{margin:0 0 14px}
+  .muted{color:var(--muted)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:760px){.g3,.g2{grid-template-columns:1fr}}
+
+  .pain h3{margin-top:0;display:flex;align-items:center;gap:8px;font-size:15.5px}
+  .pain .ic{font-size:19px}
+  .pain p{font-size:14.5px;color:var(--muted);margin:0}
+
+  /* callout */
+  .quote{border-left:3px solid var(--accent);padding:6px 0 6px 20px;
+    margin:18px 0;font-size:18px;line-height:1.5;color:var(--ink)}
+  .quote cite{display:block;font-size:13.5px;color:var(--muted);
+    font-style:normal;margin-top:8px}
+
+  /* diagram */
+  .diagram{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:10px;box-shadow:var(--shadow);overflow-x:auto}
+  .diagram svg{display:block;width:100%;height:auto;min-width:560px}
+
+  /* decision cards (ADR) */
+  .adr{margin-top:16px}
+  details.adr-item{background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;margin-bottom:12px;overflow:hidden}
+  details.adr-item[open]{box-shadow:var(--shadow)}
+  .adr-item summary{list-style:none;cursor:pointer;padding:16px 18px;
+    display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:center}
+  .adr-item summary::-webkit-details-marker{display:none}
+  .adr-num{font-family:var(--mono);font-size:13px;font-weight:700;color:#fff;
+    background:var(--accent);width:30px;height:30px;border-radius:8px;
+    display:grid;place-items:center}
+  .adr-title{font-weight:680;font-size:16px;letter-spacing:-.01em}
+  .adr-title .dec{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:1px}
+  .adr-chev{color:var(--muted);transition:transform .2s;font-size:13px}
+  details[open] .adr-chev{transform:rotate(90deg)}
+  .adr-body{padding:0 18px 18px 62px;font-size:14.5px}
+  .adr-body .row{display:flex;gap:8px;margin:4px 0;align-items:flex-start}
+  .adr-body .k{flex:0 0 78px;font-weight:600;color:var(--muted);font-size:12.5px;
+    text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  .badge{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;
+    border-radius:999px;border:1px solid transparent}
+  .badge.pick{background:var(--good-soft);color:var(--good);border-color:var(--good)}
+  .opts{margin:2px 0 0;padding:0;list-style:none;font-size:13.5px}
+  .opts li{padding:2px 0;color:var(--muted)}
+  .opts li.win{color:var(--ink)}
+  .opts li .x{color:var(--accent);font-weight:700;margin-right:6px}
+
+  /* table */
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tbl th,.tbl td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tbl th{background:var(--chip);font-size:11.5px;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--muted);font-weight:700}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{font-weight:650}
+  .tbl td.prim{font-weight:650;color:var(--ink);white-space:nowrap}
+  .yes{color:var(--good);font-weight:700}.no{color:var(--accent);font-weight:700}
+  .scroll-x{overflow-x:auto}
+  .cf{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--accent);white-space:nowrap}
+
+  /* code block */
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;
+    padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:13px;
+    line-height:1.6;margin:14px 0;border:1px solid rgba(255,255,255,.06)}
+  pre .c{color:#8a8578}.pre-cm{color:#f6a96b}.pre-s{color:#9fd28a}.pre-k{color:#7fb0e0}
+  .toolbar-label{font-size:12px;color:var(--muted);font-family:var(--mono);
+    margin:0 0 -6px;display:flex;align-items:center;gap:7px}
+  .toolbar-label::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--good)}
+
+  /* url builder */
+  .builder{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;box-shadow:var(--shadow)}
+  .url-out{font-family:var(--mono);font-size:15px;background:var(--code-bg);
+    color:var(--code-ink);padding:14px 16px;border-radius:10px;word-break:break-all;margin-top:4px}
+  .url-out .seg-slug{color:#f6a96b}.url-out .seg-rand{color:#9fd28a}.url-out .seg-host{color:#7fb0e0}
+  .ctrls{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px;align-items:center}
+  .ctrl{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+  .ctrl input[type=text]{font-family:var(--mono);font-size:13px;padding:7px 10px;
+    border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:150px}
+  .ctrl input[type=range]{accent-color:var(--accent);width:160px}
+  .seg-fade{opacity:.4}
+  .ttl-val{font-weight:700;color:var(--accent);font-family:var(--mono)}
+
+  /* phases */
+  .phase{display:grid;grid-template-columns:104px 1fr;gap:18px;padding:18px 0;
+    border-top:1px solid var(--line)}
+  .phase:first-child{border-top:none}
+  .phase .when{font-size:13px}
+  .phase .when b{display:block;font-size:15px;color:var(--accent)}
+  .phase .goal{font-weight:650;margin:0 0 4px}
+  .phase ul{margin:6px 0 0;padding-left:18px;font-size:14.5px}
+  .phase ul li{margin:4px 0}
+  .phase code{font-size:12.5px}
+
+  .q{display:flex;gap:12px;padding:12px 0;border-top:1px dashed var(--line);font-size:14.5px}
+  .q:first-child{border-top:none}
+  .q .qn{font-family:var(--mono);color:var(--accent);font-weight:700;flex:0 0 auto}
+  .resolved{color:var(--good);font-weight:700;font-size:12px;font-family:var(--mono)}
+
+  footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);
+    font-size:13px;color:var(--muted)}
+  footer ol{padding-left:18px;margin:8px 0}
+  footer li{margin:3px 0}
+
+  /* theme toggle */
+  .tt{position:fixed;top:16px;right:18px;z-index:50;background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;
+    cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-family:var(--sans)}
+  .tt:hover{border-color:var(--accent)}
+
+  .pull{font-size:15px;background:var(--accent-soft);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:13px 16px;margin:16px 0}
+  .pull b{color:var(--accent)}
+</style>
+</head>
+<body>
+<button class="tt" onclick="toggleTheme()" id="ttbtn">◐ Dark</button>
+
+<div class="wrap">
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="brand"><span class="dot"></span>protocontent
+      <small>architecture plan</small>
+    </div>
+    <nav class="toc" id="toc">
+      <a href="#problem"><span class="toc-num">01</span>The problem</a>
+      <a href="#insight"><span class="toc-num">02</span>Why HTML</a>
+      <a href="#concept"><span class="toc-num">03</span>The concept</a>
+      <a href="#arch"><span class="toc-num">04</span>Architecture</a>
+      <a href="#flow"><span class="toc-num">05</span>Publish flow</a>
+      <a href="#decisions"><span class="toc-num">06</span>Key decisions</a>
+      <a href="#api"><span class="toc-num">07</span>Tool API</a>
+      <a href="#security"><span class="toc-num">08</span>Security</a>
+      <a href="#refs"><span class="toc-num">09</span>Prior art</a>
+      <a href="#artifacts"><span class="toc-num">10</span>Artifact layer</a>
+      <a href="#mvp"><span class="toc-num">11</span>MVP &amp; stack</a>
+      <a href="#open"><span class="toc-num">12</span>Decisions</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <div class="hero">
+      <div class="eyebrow">Platform architecture · meta-artifact</div>
+      <h1>protocontent<span class="tld">.com</span></h1>
+      <p class="lede">A cross-agent MCP server that turns the HTML (and other artifacts) any agent generates
+        into instantly shareable, sandboxed links — plus one live page per session you can watch from your phone.</p>
+      <div class="meta-row">
+        <span class="chip"><b>Status</b> · draft for build</span>
+        <span class="chip"><b>Date</b> · Jun 5, 2026</span>
+        <span class="chip"><b>Stack</b> · MCP + Cloudflare edge</span>
+        <span class="chip"><b>Domains</b> · protocontent.com control · protocontent.app content</span>
+      </div>
+      <div class="pull">This document is itself the product: a self-contained <code>.html</code> file an agent
+        generated — exactly the kind of artifact <b>protocontent</b> exists to host.</div>
+    </div>
+
+    <!-- 01 PROBLEM -->
+    <section id="problem">
+      <h2><span class="n">01</span> The problem</h2>
+      <div class="h2sub">The agent makes great HTML. You can't open it.</div>
+      <p>Agents now emit single-file HTML constantly — plans, dashboards, diffs, reports.
+        The format is right (see §02). The <em>distribution</em> is broken. The artifact lands as a
+        local <code>file://</code> path, and a path is not a link. Three concrete failure modes:</p>
+      <div class="grid g3 pain" style="margin-top:18px">
+        <div class="card">
+          <h3><span class="ic">☁️</span> Cloud agents</h3>
+          <p>A remote/cloud session writes the file onto a machine you'll never touch.
+            There is no localhost to open and nothing to <code>scp</code>. The artifact is stranded.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🌳</span> Worktrees</h3>
+          <p>Locally it sometimes opens — but the HTML is an ephemeral plan, not source.
+            You don't want to <code>git add</code> a throwaway, so it lives awkwardly outside version control.</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">📱</span> Mobile / remote</h3>
+          <p>Driving an agent from your phone, the result won't open: a desktop file path
+            means nothing on mobile. You need a <em>URL</em> you can tap.</p>
+        </div>
+      </div>
+      <p style="margin-top:18px">Every path leads to the same primitive: <b>a real URL</b>, hosted off
+        your machine — and, importantly, on an origin that <b>can't reach back into your stuff</b>.</p>
+    </section>
+
+    <!-- 02 INSIGHT -->
+    <section id="insight">
+      <h2><span class="n">02</span> Why HTML</h2>
+      <div class="h2sub">HTML is the unreasonably effective agent output format</div>
+      <p>The premise comes from Thariq Shihipar's <a href="https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html" target="_blank" rel="noopener">"The Unreasonable Effectiveness of HTML"</a>.
+        The argument, compressed:</p>
+      <div class="grid g2" style="margin-top:8px">
+        <div class="card"><h3 style="margin-top:0">Information density</h3>
+          <p class="muted" style="margin:0">Tables, CSS, SVG, scripts, interactions — "there is almost no set
+            of information that Claude can read that you cannot efficiently represent with HTML."</p></div>
+        <div class="card"><h3 style="margin-top:0">Humans actually read it</h3>
+          <p class="muted" style="margin:0">Long Markdown goes unread; HTML's nav, tabs and illustrations
+            make a large document legible. Two-way controls (sliders, toggles) beat static text.</p></div>
+        <div class="card"><h3 style="margin-top:0">Single file, no build</h3>
+          <p class="muted" style="margin:0">Every artifact is one self-contained <code>.html</code>,
+            purpose-built and disposable — generated by simply asking for "an HTML file."</p></div>
+        <div class="card"><h3 style="margin-top:0">Sharing is the point</h3>
+          <p class="muted" style="margin:0">"As long as you upload the HTML file, you can share the link
+            easily." That <em>"as long as you upload it"</em> is the unsolved step.</p></div>
+      </div>
+      <div class="quote">"Markdown files are fairly hard to share… As long as you upload the HTML file,
+        you can share the link easily. Your colleagues can open it wherever they wish."
+        <cite>— Thariq Shihipar, <i>The Unreasonable Effectiveness of HTML</i></cite></div>
+      <p>The post nails the <b>generate</b> half and leaves <b>distribute</b> as a hand-wave:
+        <em>"as long as you upload it…"</em> — but never says how. <b>protocontent is that missing verb.</b></p>
+    </section>
+
+    <!-- 03 CONCEPT -->
+    <section id="concept">
+      <h2><span class="n">03</span> The concept</h2>
+      <div class="h2sub">write_file, but the file lands at a URL</div>
+      <p>Your agent already writes files. protocontent is the same primitive — <em>write a file</em> — except it
+        lands at a shareable URL instead of in your repo. It's the home for everything an agent produces that
+        <b>isn't meant to be committed</b>: plans, prototypes, dashboards, screenshots, generated images, scratch
+        notes. We start with HTML because it's the richest format, but the model is content-agnostic — a remote
+        scratch filesystem for the agent's non-repo output. Three properties define it:</p>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="card"><h3 style="margin-top:0">🔗 Always a URL</h3>
+          <p class="muted" style="margin:0">Server-side hosting, not a tunnel. Works identically from a
+            laptop, a cloud agent, or your phone, because the bytes are <em>pushed</em> to the host.</p></div>
+        <div class="card"><h3 style="margin-top:0">⏳ Ephemeral by default</h3>
+          <p class="muted" style="margin:0">Pages auto-expire (TTL). They're plans and scratch artifacts,
+            not products. Opt-in to "claim" one that earns permanence.</p></div>
+        <div class="card"><h3 style="margin-top:0">🛡️ Walled off</h3>
+          <p class="muted" style="margin:0">Served from an isolated content origin so published HTML can
+            never touch your session, cookies, or repo. "Off the URL," by design.</p></div>
+      </div>
+      <p style="margin-top:18px">Mental model: <code>publish(file, name)</code> is a <b>remote
+        <code>write_file</code></b> — cheap, idempotent, throwaway. Call it again with the same name to overwrite;
+        many files accumulate in the session's one live directory page (§10).</p>
+    </section>
+
+    <!-- 04 ARCHITECTURE -->
+    <section id="arch">
+      <h2><span class="n">04</span> Architecture</h2>
+      <div class="h2sub">Two planes, one push — all on Cloudflare</div>
+      <div class="diagram">
+        <svg viewBox="0 0 760 400" role="img" aria-label="Architecture diagram">
+          <defs>
+            <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L7,3 L0,6 Z" fill="#c2410c"/>
+            </marker>
+            <style>
+              .box{fill:var(--panel,#fff);stroke:var(--line,#e7e3d8);stroke-width:1.5;rx:12}
+              .lbl{font:600 13px var(--sans);fill:var(--ink,#1a1a17)}
+              .sub{font:11px var(--mono);fill:var(--muted,#6b6960)}
+              .ln{stroke:#c2410c;stroke-width:1.8;fill:none;marker-end:url(#ah)}
+              .lndash{stroke:var(--muted,#9a9488);stroke-width:1.4;fill:none;stroke-dasharray:4 4}
+              .zone{font:700 10px var(--sans);letter-spacing:.08em;fill:var(--muted,#6b6960)}
+            </style>
+          </defs>
+
+          <!-- agent zone -->
+          <text x="40" y="34" class="zone">ANY AGENT (local · cloud · mobile)</text>
+          <rect class="box" x="40" y="44" width="200" height="78" rx="12"/>
+          <text x="60" y="74" class="lbl">Agent + protocontent</text>
+          <text x="60" y="94" class="sub">holds the .html</text>
+          <text x="60" y="110" class="sub">calls publish()</text>
+
+          <!-- control plane -->
+          <text x="300" y="34" class="zone">CONTROL · mcp.protocontent.com</text>
+          <rect class="box" x="300" y="44" width="200" height="78" rx="12"/>
+          <text x="320" y="72" class="lbl">MCP server · Workers</text>
+          <text x="320" y="92" class="sub">authz · name · TTL · token</text>
+          <text x="320" y="108" class="sub">stdio + HTTP transport</text>
+
+          <!-- storage -->
+          <rect class="box" x="300" y="170" width="200" height="70" rx="12"/>
+          <text x="320" y="198" class="lbl">R2 + D1</text>
+          <text x="320" y="218" class="sub">projects · spaces · files</text>
+
+          <!-- sandbox host -->
+          <text x="556" y="34" class="zone">CONTENT · *.protocontent.app</text>
+          <rect class="box" x="540" y="44" width="190" height="78" rx="12"/>
+          <text x="560" y="70" class="lbl">Workers + Durable Obj</text>
+          <text x="560" y="90" class="sub">random subdomain/name</text>
+          <text x="560" y="108" class="sub">CSP · noindex · live push</text>
+
+          <!-- viewer -->
+          <rect class="box" x="540" y="300" width="190" height="64" rx="12"/>
+          <text x="560" y="328" class="lbl">Viewer (browser)</text>
+          <text x="560" y="346" class="sub">phone · teammate · you</text>
+
+          <!-- arrows -->
+          <path class="ln" d="M240,83 L296,83"/>
+          <text x="246" y="76" class="sub">① push html</text>
+          <path class="ln" d="M400,122 L400,166"/>
+          <text x="408" y="148" class="sub">② store</text>
+          <path class="ln" d="M500,205 L536,205 L536,124"/>
+          <text x="506" y="170" class="sub">③ read</text>
+          <path class="ln" d="M635,300 L635,124"/>
+          <text x="643" y="220" class="sub">④ GET + live</text>
+          <path class="lndash" d="M240,100 C400,250 470,330 538,332"/>
+          <text x="250" y="270" class="sub" style="fill:#c2410c">⑤ returns link → shared anywhere</text>
+        </svg>
+      </div>
+      <p style="margin-top:16px">The load-bearing idea is <b>①</b>: the agent <em>pushes</em> the HTML to the
+        control plane. Nothing depends on the agent's machine being reachable — which is precisely why cloud
+        and mobile work. The control plane never serves the artifact itself; it writes to storage, and a
+        <b>separate content origin</b> renders it and pushes live updates to viewers (§08, §10).</p>
+    </section>
+
+    <!-- 05 FLOW -->
+    <section id="flow">
+      <h2><span class="n">05</span> Publish flow</h2>
+      <div class="h2sub">What one publish() call looks like</div>
+      <p class="toolbar-label">tool call · from the agent</p>
+      <pre><span class="c">// Agent calls the MCP tool with the artifact it just generated</span>
+<span class="pre-k">publish_html</span>({
+  <span class="pre-cm">path</span>:  <span class="pre-s">"./plan.html"</span>,                     <span class="c">// bridge reads the file (or a folder) — no blob in context</span>
+  <span class="pre-cm">name</span>:  <span class="pre-s">"plan"</span>,                            <span class="c">// optional, readable; becomes the path</span>
+  <span class="pre-cm">ttl</span>:   <span class="pre-s">"7d"</span>                              <span class="c">// optional, default 7d</span>
+})</pre>
+      <p class="toolbar-label" style="margin-top:18px">response · back to the agent (and the human)</p>
+      <pre>{
+  <span class="pre-cm">"url"</span>:        <span class="pre-s">"https://amber-canyon-7f3.protocontent.app/plan"</span>,
+  <span class="pre-cm">"space_url"</span>:  <span class="pre-s">"https://amber-canyon-7f3.protocontent.app/"</span>,   <span class="c">// the live session page</span>
+  <span class="pre-cm">"markdown"</span>:   <span class="pre-s">"[plan ↗](https://amber-canyon-7f3.protocontent.app/plan)"</span>,
+  <span class="pre-cm">"edit_token"</span>: <span class="pre-s">"et_9f3a…"</span>,   <span class="c">// re-publish same name to update in place</span>
+  <span class="pre-cm">"expires_at"</span>: <span class="pre-s">"2026-06-12T20:00:00Z"</span>
+}</pre>
+      <p>Re-running <code>publish_html</code> with the same <code>name</code> overwrites the page at the same URL
+        — the "it just gets updated" behavior. The agent surfaces the pre-formatted <code>markdown</code> link
+        inline (a tappable title where the UI renders it, a clean <code>…/plan</code> URL where it doesn't), and
+        drops <code>space_url</code> into its closing summary.</p>
+    </section>
+
+    <!-- 06 DECISIONS -->
+    <section id="decisions">
+      <h2><span class="n">06</span> Key decisions</h2>
+      <div class="h2sub">The choices that define the system <span class="muted" style="font-weight:500;font-size:15px">— tap to expand rationale</span></div>
+      <div class="adr">
+
+        <details class="adr-item" open>
+          <summary><span class="adr-num">D1</span>
+            <span class="adr-title">Push the bytes — never tunnel
+              <span class="dec">Store HTML server-side; do not expose a local server.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>This is the decision that makes cloud + mobile
+              work at all. Tunnels (ngrok, localtunnel, Cloudflare Tunnel) expose a <em>live local process</em>:
+              they fail from cloud agents, die when the laptop sleeps, and leak the local machine.</span></div>
+            <div class="row"><span class="k">Options</span>
+              <ul class="opts">
+                <li class="win"><span class="x">✓</span>Push HTML string/file to a hosted store <span class="badge pick">chosen</span></li>
+                <li><span class="x">✗</span>Tunnel localhost (ngrok-style) — breaks the core use cases</li>
+                <li><span class="x">✗</span>Commit to a gh-pages branch — defeats "ephemeral, uncommitted"</li>
+              </ul></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D2</span>
+            <span class="adr-title">Isolated content origin
+              <span class="dec">Artifacts render on a content origin, never on the control-plane origin.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>The "off the URL so you can't access your shit"
+              instinct is exactly the same-origin boundary. Untrusted agent HTML sharing an origin with anything
+              that holds your identity = stored XSS with full session access.</span></div>
+            <div class="row"><span class="k">Shipped</span><span>Artifacts serve on random subdomains of
+              <code>*.protocontent.app</code> — a separate registrable domain from the control plane
+              (<code>api.</code>/<code>mcp.protocontent.com</code>), which sets <b>no cookies</b> and uses bearer-token
+              auth. Different site → no cookie/storage crossover. Sandboxed serving (CSP + noindex) on top.</span></div>
+            <div class="row"><span class="k">Remaining</span><span>Legacy <code>*.protocontent.com</code> artifact
+              links 301→<code>.app</code>. Last step for full isolation: submit <code>protocontent.app</code> to the
+              Public Suffix List so each artifact subdomain is its own <em>site</em> — the
+              <code>claudeusercontent.com</code> / <code>githubusercontent.com</code> pattern.</span></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D3</span>
+            <span class="adr-title">Ephemeral by default, claim to keep
+              <span class="dec">Default TTL ~7 days; opt-in persistence.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>These are plans and scratch artifacts. Auto-expiry
+              keeps the namespace clean, bounds storage cost, and matches the throwaway spirit of the format.
+              Borrowed from Netlify Drop (24h unless claimed) and tmpfiles.</span></div>
+            <div class="row"><span class="k">How</span><span>TTL per call (<code>1h…30d</code>) stored in D1; a
+              <b>Cron Trigger</b> Worker sweeps expired blobs (R2) + rows (D1). A <code>keep</code> clears the
+              expiry. Expired pages 410, then GC.</span></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D4</span>
+            <span class="adr-title">Capability URLs, no viewer account
+              <span class="dec">Unguessable link = access. Publisher authenticates; viewer doesn't.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>Frictionless sharing is the whole value — a
+              teammate or your phone opens the link with zero signup. The random high-entropy subdomain is the
+              capability. Publisher side is keyed per MCP install.</span></div>
+            <div class="row"><span class="k">Detail</span><span>The <b>session page</b> exposes every artifact,
+              so it's private-by-default (token) even while individual artifacts ride on capability URLs.
+              <code>noindex</code> everywhere so nothing hits search.</span></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D5</span>
+            <span class="adr-title">Co-located bridge primary, remote MCP as fallback
+              <span class="dec">The npx bridge runs wherever the agent runs; remote HTTP is the degraded path.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>Research settled this: only a process <em>co-located
+              with the agent</em> can (a) read the files to publish and (b) mint a stable per-thread space id — a
+              remote server can do neither (no MCP primitive reads the client's disk; Claude Code doesn't echo the
+              session id). The <code>npx protocontent</code> bridge runs in the agent's environment, <b>local or
+              cloud VM alike</b>, so the cloud case works as long as the agent can spawn an stdio MCP server.</span></div>
+            <div class="row"><span class="k">How</span><span>Bridge = the stdio MCP server the agent talks to; it
+              reads paths and calls the Worker's HTTP API. A hosted remote <code>McpAgent</code> endpoint stays
+              available for agents that only accept a URL — but inline-content only, weaker session scoping.</span></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D6</span>
+            <span class="adr-title">A session is a directory of files
+              <span class="dec">Files are the unit; an artifact can be one file or several with relative links.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>Agents rarely collapse everything into one blob — a
+              page pulls in a stylesheet, a screenshot, a data file, a second page. Forcing single-file inlining
+              fights how agents actually write. So the data model is a <b>directory per session</b>, and
+              <code>publish</code> writes a file (or a set) into it; relative links between them just work.</span></div>
+            <div class="row"><span class="k">MVP</span><span>Serve individual files first (a single
+              <code>.html</code>, standalone images) for speed — but store them as files-in-a-space from day one,
+              so multi-file and <code>publish_folder</code> are a small extension, not a re-architecture.</span></div>
+          </div>
+        </details>
+
+        <details class="adr-item">
+          <summary><span class="adr-num">D7</span>
+            <span class="adr-title">All-Cloudflare backend
+              <span class="dec">Workers + R2 + D1 + Durable Objects + Cron — one vendor, great DX.</span></span>
+            <span class="adr-chev">▶</span></summary>
+          <div class="adr-body">
+            <div class="row"><span class="k">Why</span><span>This problem's exact shape — wildcard-subdomain edge
+              serving, blob storage, live push, scheduled GC — is what Cloudflare's primitives are built for.
+              One bill, one Wrangler workflow, generous free tiers, header-level CSP control.</span></div>
+            <div class="row"><span class="k">vs Vercel</span><span>Vercel's DX is excellent for deploying apps,
+              but its functions are short-lived — persistent WebSocket "live" push needs an add-on, and per-subdomain
+              untrusted-content serving cuts against its grain. Durable Objects + wildcard Workers fit the two
+              hardest parts natively. Both are agent-buildable; Cloudflare ships official remote-MCP-on-Workers
+              templates that match this almost exactly.</span></div>
+            <div class="row"><span class="k">Note</span><span>CSP must be set via <b>HTTP headers</b> from the
+              Worker, not a <code>&lt;meta&gt;</code> tag — meta-only CSP inside an iframe is escapable. Full
+              mapping in §11.</span></div>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+    <!-- 07 API + URL builder -->
+    <section id="api">
+      <h2><span class="n">07</span> Tool API</h2>
+      <div class="h2sub">A surface small enough to fit in your head</div>
+      <div class="scroll-x">
+        <table class="tbl">
+          <tr><th>Tool</th><th>Args</th><th>Returns</th><th>Purpose</th></tr>
+          <tr><td><b>publish_html</b></td><td><code>path|content</code>, <code>name?</code>, <code>ttl?</code></td>
+            <td><code>url, space_url, markdown, edit_token, expires_at</code></td><td>Write a file (bridge reads the path). The 95% tool.</td></tr>
+          <tr><td><b>publish_folder</b></td><td><code>dir</code>, <code>entry?</code>, <code>ttl?</code></td><td><code>url, space_url, markdown</code></td><td>Write a multi-file artifact (relative links).</td></tr>
+          <tr><td><b>list</b></td><td><code>—</code></td><td><code>[{url, name, expires_at}]</code></td><td>What's live in this thread's space.</td></tr>
+          <tr><td><b>history</b></td><td><code>name</code></td><td><code>[{version, at, url}]</code></td><td>Past versions of an artifact.</td></tr>
+          <tr><td><b>unpublish</b></td><td><code>name|url</code>, <code>edit_token</code></td><td><code>ok</code></td><td>Kill an artifact now.</td></tr>
+          <tr><td><b>keep</b></td><td><code>name</code>, <code>edit_token</code></td><td><code>expires_at:null</code></td><td>Promote to durable.</td></tr>
+        </table>
+      </div>
+
+      <h3>URL scheme — try it</h3>
+      <p class="muted" style="margin-top:0;font-size:14.5px">A random subdomain <em>is</em> the session (and the
+        capability); the readable name is just the path. Drag the controls:</p>
+      <div class="builder">
+        <div class="url-out" id="urlOut">
+          <span class="seg-host">https://</span><span class="seg-rand" id="sRand">amber-canyon-7f3</span><span class="seg-host">.protocontent.app/</span><span class="seg-slug" id="sSlug">plan</span>
+        </div>
+        <div class="ctrls">
+          <label class="ctrl">artifact name
+            <input type="text" id="iSlug" value="plan" oninput="rebuild()" maxlength="40">
+          </label>
+          <label class="ctrl">subdomain entropy <span id="entLbl" class="ttl-val">3 chars</span>
+            <input type="range" id="iEnt" min="0" max="8" value="3" oninput="rebuild()">
+          </label>
+          <label class="ctrl">ttl <span id="ttlLbl" class="ttl-val">7 days</span>
+            <input type="range" id="iTtl" min="0" max="5" value="3" oninput="rebuild()">
+          </label>
+        </div>
+        <p class="muted" id="ttlNote" style="margin:14px 0 0;font-size:13.5px"></p>
+      </div>
+    </section>
+
+    <!-- 08 SECURITY -->
+    <section id="security">
+      <h2><span class="n">08</span> Security model</h2>
+      <div class="h2sub">"Off the URL" is an origin boundary</div>
+      <p>The original instinct — <em>"off the URL so that you aren't able to access your shit"</em> — describes
+        the single most important rule in this space: <b>untrusted, agent-generated HTML must not share an origin
+        with anything that holds your identity.</b> Defense in depth, outermost first:</p>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h3 style="margin-top:0">① Isolated content origin</h3>
+          <p class="muted" style="margin:0">Artifacts on <code>*.protocontent.app</code> — a separate registrable
+            domain from the <code>.com</code> control plane (<code>api.</code>/<code>mcp.</code>, no cookies). Different
+            site → no crossover. <b>Remaining:</b> PSL-list <code>protocontent.app</code> for inter-artifact isolation.</p></div>
+        <div class="card"><h3 style="margin-top:0">② Sandboxed iframe (embeds)</h3>
+          <p class="muted" style="margin:0">When embedded, render inside <code>&lt;iframe sandbox&gt;</code>
+            without <code>allow-same-origin</code>; re-grant scripts/forms selectively. The Claude Artifacts model.</p></div>
+        <div class="card"><h3 style="margin-top:0">③ CSP via HTTP headers</h3>
+          <p class="muted" style="margin:0">The Worker sets <code>connect-src</code>/<code>script-src</code> to
+            curb exfiltration — as a <b>header</b>, never a <code>&lt;meta&gt;</code> tag (meta-only CSP in an
+            iframe is escapable, per Willison).</p></div>
+        <div class="card"><h3 style="margin-top:0">④ noindex + capability URL</h3>
+          <p class="muted" style="margin:0"><code>X-Robots-Tag: noindex</code> everywhere; artifact access gated
+            by the unguessable subdomain; the session page is token-private by default.</p></div>
+      </div>
+      <div class="quote" style="font-size:15px">Anthropic chose browser-native iframe + origin isolation for
+        Artifacts over a custom sandbox precisely because "browsers already enforce strong isolation between
+        origins… hardened over years." We inherit that boundary instead of inventing one.</div>
+    </section>
+
+    <!-- 09 PRIOR ART -->
+    <section id="refs">
+      <h2><span class="n">09</span> Prior art</h2>
+      <div class="h2sub">What we borrow, what we avoid</div>
+      <div class="scroll-x">
+        <table class="tbl">
+          <tr><th>Reference</th><th>URL / share model</th><th>Ephemeral</th><th>Borrow ✓ / Avoid ✗</th></tr>
+          <tr><td><b>Claude Artifacts</b></td><td>Publish → public link, no account; separate <code>claudeusercontent.com</code></td><td>Until unpublished</td>
+            <td><span class="yes">✓</span> Separate-origin + sandbox + CSP blueprint · <span class="no">✗</span> can't re-publish after unpublish</td></tr>
+          <tr><td><b>EdgeOne Pages MCP</b></td><td><code>deploy_html</code> → public URL; edge + KV</td><td>No</td>
+            <td><span class="yes">✓</span> Clean tool surface, edge/KV storage · <span class="no">✗</span> transport tool-parity gap</td></tr>
+          <tr><td><b>Netlify Drop</b></td><td>Random <code>*.netlify.app</code>, no account</td><td>24h unless claimed</td>
+            <td><span class="yes">✓</span> No-auth + auto-TTL + claim-to-keep</td></tr>
+          <tr><td><b>ChatGPT Canvas</b></td><td><code>chatgpt.com/share/…</code>, tied to a chat</td><td>No</td>
+            <td><span class="no">✗</span> Artifact coupled to transcript — we want standalone pages</td></tr>
+          <tr><td><b>ngrok / tunnels</b></td><td>Tunnel to a live local server</td><td>URL is, process isn't</td>
+            <td><span class="no">✗</span> Breaks cloud + mobile; dies on sleep (see D1)</td></tr>
+          <tr><td><b>DropBin MCP</b></td><td>Temp URLs, no auth (SSE MCP)</td><td>Yes</td>
+            <td><span class="yes">✓</span> Closest existing positioning to ours</td></tr>
+        </table>
+      </div>
+      <p class="muted" style="font-size:13.5px;margin-top:12px">Every mature system converges on the same
+        intersection: push to a store → random subdomain on a dedicated origin → sandbox + CSP → no viewer
+        account → optional TTL. protocontent is that consensus — packaged cross-agent, with a live session page.</p>
+    </section>
+
+    <!-- 10 ARTIFACT LAYER -->
+    <section id="artifacts">
+      <h2><span class="n">10</span> Beyond HTML</h2>
+      <div class="h2sub">One session, one URL — a portable artifacts list</div>
+      <p>The primitive — <em>push bytes → sandboxed capability URL + TTL</em> — doesn't care that it's HTML.
+        HTML is the <b>wedge</b>; the <b>category</b> is an ephemeral host for everything an agent makes and
+        never commits: images, markdown plans, data, screenshots, several linked HTML files.</p>
+      <div class="grid g2" style="margin-top:8px">
+        <div class="card"><h3 style="margin-top:0">Comes (nearly) free</h3>
+          <p class="muted" style="margin:0"><b>Images, PDFs, raw HTML</b> render natively in the browser — same
+            cloud/mobile pain, and images need <em>no</em> sandbox since they don't execute. Strongest second type.</p></div>
+        <div class="card"><h3 style="margin-top:0">The one real build</h3>
+          <p class="muted" style="margin:0"><b>Markdown</b> is the lone type that needs a server-side renderer
+            (raw <code>.md</code> shows as plain text). Data viewers (CSV/JSON) are a nice-to-have after.</p></div>
+      </div>
+
+      <h3>The session space = the unbundled artifacts panel</h3>
+      <p>The unlock is grouping. Give each agent <b>session</b> a space, and everything it publishes shows up as a
+        live, auto-generated index at one URL — the Claude.ai / ChatGPT artifacts panel, but <b>hosted, portable,
+        and openable on your phone</b>. The index is itself an unreasonably-effective HTML page — meta again.</p>
+      <pre><span class="c">// one space per session — every publish lands in it</span>
+https://amber-canyon-<span class="pre-s">7f3</span>.protocontent.app/        <span class="c">← live index of the whole task</span>
+  ├── /plan            <span class="c">updated in place</span>
+  ├── /schema.png      <span class="c">native render, no sandbox</span>
+  ├── /before-after
+  └── /notes           <span class="c">rendered server-side</span></pre>
+      <div class="pull"><b>The killer unlock:</b> open the space URL on your phone and <b>watch a cloud agent's
+        artifacts appear as it works</b> — not just the final link, a live window into the session. The cleanest
+        answer to the original remote / mobile pain.</div>
+
+      <p><b>Stance:</b> build the general primitive, expose a narrow surface. Storage and serving are MIME-agnostic
+        from day one; a new type only ships when it clears the bar <em>"is viewing this painful today?"</em> —
+        images clear it instantly, arbitrary files don't. The per-session space is what turns a pastebin into
+        something worth the "Dropbox for agents" comparison — without having to claim it on day one.</p>
+    </section>
+
+    <!-- 11 MVP & STACK -->
+    <section id="mvp">
+      <h2><span class="n">11</span> MVP &amp; stack</h2>
+      <div class="h2sub">The thinnest slice that delivers "watch it on my phone"</div>
+      <p>The whole MVP exists to prove one 20-second moment: <b>kick off a cloud agent, open the session URL on
+        your phone, and watch artifacts appear as it works.</b> Everything below is in service of that. Every
+        component is a first-party Cloudflare primitive — one vendor, one <code>wrangler deploy</code>.</p>
+
+      <h3>Stack — every need → a Cloudflare primitive</h3>
+      <div class="scroll-x">
+        <table class="tbl">
+          <tr><th>Need</th><th>Primitive</th><th>Why this one</th></tr>
+          <tr><td class="prim">Remote MCP server (HTTP/SSE)</td><td><span class="cf">Workers</span> + Agents SDK (<code>McpAgent</code>)</td>
+            <td>First-class remote MCP on Workers; built-in OAuth provider for later. Wrangler DX.</td></tr>
+          <tr><td class="prim">Local / stdio access</td><td><span class="cf">npx</span> stdio bridge → same Worker</td>
+            <td>Covers agents that only speak stdio; one published npm package.</td></tr>
+          <tr><td class="prim">Store HTML + assets</td><td><span class="cf">R2</span></td>
+            <td>S3-compatible object store, zero egress fees, cheap. Blobs keyed <code>space/name</code>.</td></tr>
+          <tr><td class="prim">Metadata, sessions, tokens, TTL</td><td><span class="cf">D1</span> (serverless SQLite)</td>
+            <td>Relational — the clean "list every artifact in a space" query the index needs.</td></tr>
+          <tr><td class="prim">Wildcard subdomain serving</td><td><span class="cf">Workers</span> + wildcard DNS <code>*.protocontent.app</code></td>
+            <td>Native per-subdomain edge routing; CSP + noindex headers set in the Worker.</td></tr>
+          <tr><td class="prim">Live session view</td><td><span class="cf">Durable Objects</span> (one per space) + WebSocket/SSE</td>
+            <td>Holds viewer connections; publish notifies it; pushes "new artifact." Purpose-built for live.</td></tr>
+          <tr><td class="prim">Expiry / garbage collection</td><td><span class="cf">Cron Triggers</span> (scheduled Worker)</td>
+            <td>Periodic sweep deletes expired R2 objects + D1 rows. R2 lifecycle rules as backstop.</td></tr>
+          <tr><td class="prim">Publisher auth + secrets</td><td><span class="cf">D1</span> API keys · <span class="cf">Wrangler</span> secrets</td>
+            <td>Per-install bearer token, no cookies (bounds same-domain risk per D2).</td></tr>
+        </table>
+      </div>
+      <p class="muted" style="font-size:13.5px;margin-top:10px">All comfortably inside Cloudflare's free / low tiers
+        at MVP scale. No niche SaaS, no bare metal — one account, one dashboard, one bill.</p>
+
+      <h3>Build phases</h3>
+      <div class="card" style="padding:8px 22px">
+        <div class="phase">
+          <div class="when"><b>Build now</b><span class="muted">the v1 push</span></div>
+          <div>
+            <p class="goal">Ship the whole loop — live, multi-file, project-aware.</p>
+            <ul>
+              <li><code>publish({path, name?, ttl?})</code> — the local bridge reads a <b>file or folder</b> and uploads it → R2 + D1 → returns <code>url</code>, <code>space_url</code>, <code>markdown</code></li>
+              <li><b>Space = one agent thread</b> (isolated); spaces roll up into a durable <b>project</b> (account-scoped) that aggregates threads</li>
+              <li><b>Durable Objects</b> push for live updates from the start — the session page is <b>simple: shows everything</b>, no curation</li>
+              <li><code>publish_folder</code> / project folders (multi-file, relative links) + <b>version history</b> per file</li>
+              <li><code>list</code>, <code>unpublish</code>, <code>keep</code>; default 7d TTL; CSP + noindex; bearer auth; <code>npx protocontent</code> stdio bridge</li>
+            </ul></div>
+        </div>
+        <div class="phase">
+          <div class="when"><b>Later</b><span class="muted">deferred on purpose</span></div>
+          <div>
+            <p class="goal">Hardening &amp; breadth, once the loop proves out.</p>
+            <ul>
+              <li>Dedicated content domain + PSL (the §08 origin hardening) — before any logged-in dashboard or sensitive outside content</li>
+              <li>Images (native) → markdown rendering; size caps + abuse limits</li>
+              <li>Token-private session pages; team sharing; Workers OAuth; diff-view UI; one-command installers</li>
+            </ul></div>
+        </div>
+      </div>
+
+      <div class="pull" style="margin-top:18px"><b>The one metric that answers "is it a thing":</b> publishes from
+        <b>more than one distinct agent</b> (Claude Code <em>and</em> Cursor <em>and</em> Codex…). All-Claude usage
+        means a vendor absorbs it; cross-agent usage means the neutral layer is real.</div>
+    </section>
+
+    <!-- 12 DECISIONS -->
+    <section id="open">
+      <h2><span class="n">12</span> Decisions</h2>
+      <div class="h2sub">Locked for the build — two items to confirm while building</div>
+      <div class="card">
+        <div class="q"><span class="qn">Q1</span><span><b>Hosted vs self-host</b> <span class="resolved">✓ hosted</span> — managed on Cloudflare. Self-host is a maybe-later, not now.</span></div>
+        <div class="q"><span class="qn">Q2</span><span><b>Default TTL</b> <span class="resolved">✓ 7 days</span> — per call <code>1h…30d</code>; <code>keep</code> makes it durable.</span></div>
+        <div class="q"><span class="qn">Q3</span><span><b>Content domain</b> <span class="resolved">✓ shipped</span> — artifacts now serve on the separate registrable domain <code>*.protocontent.app</code>; legacy <code>.com</code> links 301→<code>.app</code>. Remaining: submit <code>protocontent.app</code> to the Public Suffix List for inter-artifact isolation. Detail in §08.</span></div>
+        <div class="q"><span class="qn">Q4</span><span><b>Input model</b> <span class="resolved">✓ path-first</span> — research confirms no MCP primitive lets a server read the client's disk, so the <b>co-located bridge</b> (runs wherever the agent runs — laptop or cloud VM) reads the path/folder and uploads bytes. Pure-remote-with-no-bridge falls back to inline content, single small files only.</span></div>
+        <div class="q"><span class="qn">Q5</span><span><b>What is a "session"</b> <span class="resolved">✓ per agent thread</span> — a space = one isolated thread; spaces roll up into a durable <b>project</b> (account-scoped). Mechanism (from research): the bridge <b>mints a per-process space id</b> (seeded from <code>CLAUDE_SESSION_ID</code> when present), routed to a <b>named Durable Object</b> via <code>idFromName(spaceId)</code>. <em>Not</em> the HTTP <code>Mcp-Session-Id</code> — Claude Code doesn't echo it today.</span></div>
+        <div class="q"><span class="qn">Q6</span><span><b>Session page</b> <span class="resolved">✓ show everything</span> — simple auto-include, no curation or pinning for now.</span></div>
+        <div class="q"><span class="qn">Q7</span><span><b>Live transport</b> <span class="resolved">✓ Durable Objects</span> — real push from the start; skip the polling interim.</span></div>
+      </div>
+    </section>
+
+    <footer>
+      <p><b>Sources</b></p>
+      <ol>
+        <li>Thariq Shihipar — <a href="https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html" target="_blank" rel="noopener">The Unreasonable Effectiveness of HTML</a> · <a href="https://thariqs.github.io/html-effectiveness/" target="_blank" rel="noopener">examples</a></li>
+        <li><a href="https://newsletter.pragmaticengineer.com/p/how-anthropic-built-artifacts" target="_blank" rel="noopener">How Anthropic built Artifacts</a> · <a href="https://support.claude.com/en/articles/9547008-publishing-and-sharing-artifacts" target="_blank" rel="noopener">Publishing &amp; sharing artifacts</a></li>
+        <li><a href="https://developers.cloudflare.com/agents/model-context-protocol/" target="_blank" rel="noopener">Cloudflare — remote MCP servers (Agents SDK)</a> · <a href="https://developers.cloudflare.com/durable-objects/" target="_blank" rel="noopener">Durable Objects</a> · <a href="https://developers.cloudflare.com/r2/" target="_blank" rel="noopener">R2</a> · <a href="https://developers.cloudflare.com/d1/" target="_blank" rel="noopener">D1</a></li>
+        <li><a href="https://security.googleblog.com/2012/08/content-hosting-for-modern-web.html" target="_blank" rel="noopener">Google — Content hosting for the modern web</a> (why a separate origin) · <a href="https://simonwillison.net/2026/Apr/3/test-csp-iframe-escape/" target="_blank" rel="noopener">Willison — CSP iframe escape</a></li>
+      </ol>
+      <p style="margin-top:14px;opacity:.7">Generated as a self-contained <code>.html</code> artifact — the kind protocontent publishes. · Draft v0.2</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // theme
+  function toggleTheme(){
+    const r=document.documentElement;
+    const dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('ttbtn').textContent=dark?'◐ Dark':'◑ Light';
+  }
+  // scroll-spy TOC
+  const links=[...document.querySelectorAll('nav.toc a')];
+  const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const obs=new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){
+      links.forEach(l=>l.classList.remove('active'));
+      const a=map.get(e.target.id); if(a)a.classList.add('active');
+    }});
+  },{rootMargin:'-20% 0px -70% 0px'});
+  document.querySelectorAll('main section').forEach(s=>obs.observe(s));
+
+  // URL builder
+  const TTLS=[['1 hour','expires in an hour — true scratch'],
+              ['1 day','one day — a working session'],
+              ['3 days','three days — a short-lived plan'],
+              ['7 days','one week — the sensible default'],
+              ['30 days','a month — near-durable'],
+              ['∞ (claimed)','kept forever — promoted via keep()']];
+  const WORDS=['amber','cedar','quiet','river','canyon','harbor','ember','slate','maple','dusk','flint','cove'];
+  const RAND='abcdefghijkmnpqrstuvwxyz23456789';
+  function slugify(s){return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'untitled';}
+  function rand(n){let o='';for(let i=0;i<n;i++)o+=RAND[(i*7+n*3+13)%RAND.length];return o;}
+  function space(name,ent){
+    const a=WORDS[name.length%WORDS.length], b=WORDS[(name.length*7+5)%WORDS.length];
+    return a+'-'+b+(ent>0? '-'+rand(ent):'');
+  }
+  function rebuild(){
+    const slug=slugify(document.getElementById('iSlug').value);
+    const ent=+document.getElementById('iEnt').value;
+    const ttl=+document.getElementById('iTtl').value;
+    document.getElementById('sSlug').textContent=slug;
+    document.getElementById('sRand').textContent=space(slug,ent);
+    document.getElementById('entLbl').textContent=ent? ent+' chars':'none (guessable)';
+    document.getElementById('ttlLbl').textContent=TTLS[ttl][0];
+    document.getElementById('ttlNote').textContent='Session = the subdomain. TTL '+TTLS[ttl][0]+' — '+TTLS[ttl][1]+
+      (ent? '. '+(ent>=4?'Unguessable subdomain acts as the access capability.':'Low entropy — add chars for a real capability URL.') : '. No random suffix: the session would be guessable.');
+  }
+  rebuild();
+</script>
+</body>
+</html>

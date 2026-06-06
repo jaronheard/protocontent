@@ -1,0 +1,76 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "protocontent",
+  "main": "src/index.ts",
+
+  // Use a recent compatibility date. nodejs_compat is required by the
+  // Agents SDK / MCP SDK and for Node built-ins used by dependencies.
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": {
+    "enabled": true
+  },
+
+  // One wildcard route covers api., mcp., AND every <space>.protocontent.com —
+  // the Worker dispatches by the Host header. Requires a proxied "*" DNS record
+  // on the zone (Universal SSL covers *.protocontent.com automatically).
+  "routes": [
+    { "pattern": "*.protocontent.com/*", "zone_name": "protocontent.com" },
+    { "pattern": "*.protocontent.app/*", "zone_name": "protocontent.app" }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Custom domains / routes — FILL THESE IN after the zone is on Cloudflare.
+  // All three hostnames route to THIS one Worker; src/index.ts dispatches by
+  // request host. The wildcard ("*.protocontent.com") requires the zone to be
+  // active on Cloudflare plus a wildcard route or wildcard Custom Domain.
+  //
+  // Easiest: add each as a "Custom Domain" in the Workers dashboard:
+  //   - api.protocontent.com
+  //   - mcp.protocontent.com
+  //   - *.protocontent.com        (wildcard — serves public content per space)
+  //
+  // Or declare routes here (requires "zone_name" matching your zone):
+  // "routes": [
+  //   { "pattern": "api.protocontent.com", "custom_domain": true },
+  //   { "pattern": "mcp.protocontent.com", "custom_domain": true },
+  //   { "pattern": "*.protocontent.com/*", "zone_name": "protocontent.com" }
+  // ],
+  // ---------------------------------------------------------------------------
+
+  "r2_buckets": [
+    {
+      "binding": "BLOBS",
+      "bucket_name": "protocontent-blobs"
+    }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "protocontent",
+      "database_id": "14e34612-13d3-4d0e-bb90-9e39db4e16de"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "SPACE", "class_name": "Space" },
+      { "name": "MCP_OBJECT", "class_name": "ProtoMcpAgent" }
+    ]
+  },
+
+  // Both DOs are SQLite-backed (required on the Workers free plan). Space uses
+  // no storage (broadcast only); ProtoMcpAgent uses the Agents SDK's SQLite store.
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Space", "ProtoMcpAgent"]
+    }
+  ],
+
+  "triggers": {
+    "crons": ["0 * * * *"]
+  }
+}

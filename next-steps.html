@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>protocontent — Next Steps</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1a17; --muted:#6b6960;
+    --line:#e7e3d8; --accent:#c2410c; --accent-soft:#fff1e9;
+    --good:#15803d; --good-soft:#e7f6ec; --warn:#b45309; --warn-soft:#fdf3e3;
+    --chip:#f1eee5; --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(40,30,10,.07);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg:#16140f; --panel:#1f1c16; --ink:#f1ede3; --muted:#a7a194;
+    --line:#332e24; --accent:#fb923c; --accent-soft:#2a1c11;
+    --good:#4ade80; --good-soft:#13241a; --warn:#fbbf24; --warn-soft:#241c0c;
+    --chip:#272319; --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.62;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto;padding:60px 24px 110px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.84em;background:var(--chip);
+    padding:.12em .42em;border-radius:5px;border:1px solid var(--line)}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:44px;line-height:1.05;letter-spacing:-.03em;margin:.2em 0 .2em;font-weight:850}
+  .lede{font-size:19px;color:var(--muted);max-width:60ch;margin:0}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0}
+  .chip{font-size:12.5px;background:var(--chip);border:1px solid var(--line);
+    color:var(--muted);padding:4px 11px;border-radius:999px;font-weight:500}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.ok{background:var(--good-soft);color:var(--good);border-color:var(--good)}
+
+  section{margin-top:46px}
+  .kicker{display:flex;align-items:center;gap:10px;font-size:13px;text-transform:uppercase;
+    letter-spacing:.06em;font-weight:700;margin:0 0 4px}
+  .kicker .tdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .t1 .tdot{background:var(--accent)} .t2 .tdot{background:var(--warn)}
+  .t3 .tdot{background:var(--muted)} .t4 .tdot{background:var(--good)}
+  .t1 .kicker{color:var(--accent)} .t2 .kicker{color:var(--warn)}
+  .t3 .kicker{color:var(--muted)} .t4 .kicker{color:var(--good)}
+  h2{font-size:24px;font-weight:780;letter-spacing:-.02em;margin:0 0 4px;line-height:1.2;color:var(--ink)}
+  .ssub{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+  p{margin:0 0 14px}.muted{color:var(--muted)}
+
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:13px;
+    padding:15px 18px;box-shadow:var(--shadow);margin-bottom:12px;
+    display:grid;grid-template-columns:30px 1fr;gap:14px;align-items:start}
+  .step .num{font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;background:var(--accent);
+    width:28px;height:28px;border-radius:8px;display:grid;place-items:center}
+  .t2 .step .num{background:var(--warn)} .t3 .step .num{background:var(--muted)} .t4 .step .num{background:var(--good)}
+  .step .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:3px}
+  .step .ttl{font-weight:700;font-size:16px;letter-spacing:-.01em}
+  .step .why{font-size:14.5px;color:var(--muted);margin:0}
+  .step .why b{color:var(--ink);font-weight:600}
+  .eff{font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;
+    border:1px solid var(--line);color:var(--muted);background:var(--chip);white-space:nowrap}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .tag.block{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+  .tag.risk{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)}
+
+  .pull{font-size:16px;background:var(--accent-soft);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:0 11px 11px 0;padding:15px 18px;margin:18px 0}
+  .pull b{color:var(--accent)}
+  .debt{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:6px 20px;box-shadow:var(--shadow)}
+  .debt .d{display:flex;gap:10px;padding:11px 0;border-top:1px dashed var(--line);font-size:14.5px}
+  .debt .d:first-child{border-top:none}
+  .debt .d .m{color:var(--warn);font-weight:800;flex:0 0 auto}
+
+  .done{display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;margin:4px 0 0}
+  @media(max-width:620px){.done{grid-template-columns:1fr}}
+  .done div{font-size:14px;color:var(--muted)}.done .c{color:var(--good);font-weight:800;margin-right:7px}
+
+  footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+  footer a{font-weight:600}
+  .tt{position:fixed;top:16px;right:18px;z-index:50;background:var(--panel);border:1px solid var(--line);
+    border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-family:var(--sans)}
+  .tt:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<button class="tt" onclick="toggleTheme()" id="ttbtn">◐ Dark</button>
+<div class="wrap">
+
+  <div class="eyebrow">protocontent · roadmap</div>
+  <h1>Next Steps</h1>
+  <p class="lede">What's shipped, what to do next — prioritized by what unblocks others, what's needed before
+    outside users, and what widens the category. Honest about the debt.</p>
+  <div class="chips">
+    <span class="chip ok"><b>✓ Live</b> · deployed on Cloudflare</span>
+    <span class="chip"><b>Stack</b> · Workers · R2 · D1 · Durable Objects</span>
+    <span class="chip"><b>Updated</b> · Jun 6, 2026</span>
+  </div>
+
+  <!-- WHERE WE ARE -->
+  <section>
+    <h2>Where we are</h2>
+    <p class="ssub">The v1 loop is built, deployed, and verified live end-to-end.</p>
+    <div class="done">
+      <div><span class="c">✓</span>Worker deployed; <code>*.protocontent.app</code> content routing</div>
+      <div><span class="c">✓</span>publish / list / history / keep / unpublish</div>
+      <div><span class="c">✓</span>Per-thread spaces, version history</div>
+      <div><span class="c">✓</span>Live WebSocket push (Durable Objects)</div>
+      <div><span class="c">✓</span>CSP + noindex + nosniff on served content</div>
+      <div><span class="c">✓</span><code>npx</code> bridge → real publish verified</div>
+    </div>
+  </section>
+
+  <!-- TIER 1 -->
+  <section class="t1">
+    <div class="kicker"><span class="tdot"></span>Now · unblock &amp; de-risk</div>
+    <h2>Small, do these first</h2>
+    <p class="ssub">Cheap moves that either unblock distribution or close a real hole.</p>
+
+    <div class="step" style="opacity:.9"><div class="num" style="background:var(--good)">✓</div><div>
+      <div class="top"><span class="ttl">Publish the bridge to npm</span><span class="tag" style="background:var(--good-soft);color:var(--good);border:1px solid var(--good)">✓ shipped · v0.1.0</span></div>
+      <p class="why"><b>Done</b> — live as <code>protocontent@0.1.0</code> (the name was free), so <code>npx protocontent</code>
+        works for anyone. Note: a client-side <code>minimumReleaseAge</code> npm policy can delay installs.</p>
+    </div></div>
+
+    <div class="step" style="opacity:.9"><div class="num" style="background:var(--good)">✓</div><div>
+      <div class="top"><span class="ttl">Audit space ownership on publish</span><span class="tag" style="background:var(--good-soft);color:var(--good);border:1px solid var(--good)">✓ audited · safe</span></div>
+      <p class="why"><b>Verified — no hole.</b> <code>ensureSpace</code> rejects a publish to another project's space with 403;
+        list/unpublish/keep are guarded by <code>requireOwnedSpace</code>. Confirmed live: a second project gets 403 on
+        publish/list/unpublish while the owner keeps full access. (Artifact <em>reads</em> stay public by capability-URL design — see #5.)</p>
+    </div></div>
+
+    <div class="step"><div class="num">3</div><div>
+      <div class="top"><span class="ttl">Server-side size &amp; rate caps</span><span class="eff">S–M</span><span class="tag risk">abuse / cost</span></div>
+      <p class="why">The bridge has client-side rails, but the Worker API has none. Add request/file size limits and
+        basic per-token rate limits on <code>/v1/publish</code> and <code>/v1/projects</code> (anonymous mint is unauthenticated).</p>
+    </div></div>
+  </section>
+
+  <!-- TIER 2 -->
+  <section class="t2">
+    <div class="kicker"><span class="tdot"></span>Before outside users · hardening</div>
+    <h2>Required once it's not just you</h2>
+    <p class="ssub">The line between "personal tool" and "service other people put content on."</p>
+
+    <div class="step"><div class="num">4</div><div>
+      <div class="top"><span class="ttl">Dedicated content domain + PSL</span><span class="tag" style="background:var(--good-soft);color:var(--good);border:1px solid var(--good)">◑ domain shipped</span></div>
+      <p class="why"><b>Done:</b> artifacts now serve on <code>*.protocontent.app</code> — a separate registrable domain
+        from the <code>.com</code> control plane, so untrusted HTML can't share cookies with it. Legacy <code>.com</code>
+        links 301→<code>.app</code>. <b>Remaining:</b> submit <code>protocontent.app</code> to the Public Suffix List for
+        <em>inter-artifact</em> isolation (review takes weeks — do it before sensitive third-party content).</p>
+    </div></div>
+
+    <div class="step"><div class="num">5</div><div>
+      <div class="top"><span class="ttl">Token-private session pages</span><span class="eff">M</span></div>
+      <p class="why">The session index currently shows everything to anyone with the (unguessable) subdomain. Add an
+        optional private flag / token gate for the index — it's the one URL that exposes a whole thread at once.</p>
+    </div></div>
+
+    <div class="step"><div class="num">6</div><div>
+      <div class="top"><span class="ttl">Abuse handling &amp; takedown</span><span class="eff">M</span><span class="tag risk">you're a content host now</span></div>
+      <p class="why">Phishing/malware scanning on upload, a report/takedown path, and a kill switch. Unavoidable once
+        the link is public and anyone can mint a project.</p>
+    </div></div>
+
+    <div class="step"><div class="num">7</div><div>
+      <div class="top"><span class="ttl">Test performance &amp; load</span><span class="eff">S–M</span></div>
+      <p class="why">Measure publish/serve latency and load-test the live push + D1/R2 under concurrency before real
+        traffic. <b>The first run already paid off.</b> A 2&nbsp;KB→2&nbsp;MB sweep ruled out payload (publish ~340→~730&nbsp;ms,
+        sub-linear). The real spike was a <b>Durable Object cold start</b> on the first publish to an idle space (~700&nbsp;ms,
+        because publish <em>awaited</em> the live-push notify). <b>Fixed &amp; shipped</b> via <code>ctx.waitUntil</code> —
+        cold penalty ~700&nbsp;ms → ~130&nbsp;ms. Warm publish p50 ~335&nbsp;ms, serve ~165&nbsp;ms, mint ~50&nbsp;ms.
+        Next: concurrent throughput, R2/D1 ceilings, a CI perf gate.</p>
+    </div></div>
+  </section>
+
+  <!-- TIER 3 -->
+  <section class="t3">
+    <div class="kicker"><span class="tdot"></span>Widen · features</div>
+    <h2>Make it cover more of what agents make</h2>
+    <p class="ssub">The general primitive is already MIME-agnostic — these are the views worth building.</p>
+
+    <div class="step"><div class="num">8</div><div>
+      <div class="top"><span class="ttl">Markdown rendering</span><span class="eff">M</span></div>
+      <p class="why">The one type that needs a server-side renderer (raw <code>.md</code> shows as plain text). Images
+        &amp; PDFs already serve natively.</p>
+    </div></div>
+
+    <div class="step"><div class="num">9</div><div>
+      <div class="top"><span class="ttl">Image / gallery view in the session page</span><span class="eff">S–M</span></div>
+      <p class="why">Serving works; add thumbnails + a lightbox so a space full of screenshots reads as a gallery, not a file list.</p>
+    </div></div>
+
+    <div class="step"><div class="num">10</div><div>
+      <div class="top"><span class="ttl">Version diff UI</span><span class="eff">M</span></div>
+      <p class="why"><code>history</code> already tracks versions — add a visual diff between two versions of an artifact.</p>
+    </div></div>
+
+    <div class="step"><div class="num">11</div><div>
+      <div class="top"><span class="ttl">Project rollup page</span><span class="eff">M</span></div>
+      <p class="why">A durable landing page listing all your spaces across threads — the "project" half of the model that exists in the schema but has no view yet.</p>
+    </div></div>
+
+    <div class="step"><div class="num">12</div><div>
+      <div class="top"><span class="ttl">Accounts, teams, OAuth</span><span class="eff">L</span></div>
+      <p class="why">Named projects, shared spaces, Workers OAuth provider — when you outgrow anonymous tokens.</p>
+    </div></div>
+  </section>
+
+  <!-- TIER 4 -->
+  <section class="t4">
+    <div class="kicker"><span class="tdot"></span>Distribution · the real test</div>
+    <h2>Find out if it's a thing</h2>
+    <p class="ssub">The build was the cheap part. This is what answers the actual question.</p>
+
+    <div class="step"><div class="num">13</div><div>
+      <div class="top"><span class="ttl">Build in public</span><span class="eff">S · ongoing</span></div>
+      <p class="why">Show HN, an <code>awesome-mcp-servers</code> PR, MCP discussions, X — lead every post with a 30-second
+        GIF of the phone-live-view moment.</p>
+    </div></div>
+
+    <div class="step"><div class="num">14</div><div>
+      <div class="top"><span class="ttl">Get it in front of the Claude Code team</span><span class="eff">S</span></div>
+      <p class="why">Frame it as <em>"the missing 'upload it' step from The Unreasonable Effectiveness of HTML."</em>
+        That single resonance is product validation <em>and</em> the hire signal at once.</p>
+    </div></div>
+
+    <div class="pull"><b>The one metric that matters:</b> publishes from <b>more than one distinct agent</b>
+      (Claude Code <em>and</em> Cursor <em>and</em> Codex…). All-Claude usage means a vendor absorbs it; cross-agent
+      usage means the neutral layer is real.</div>
+  </section>
+
+  <!-- DEBT -->
+  <section>
+    <div class="kicker" style="color:var(--warn)"><span class="tdot" style="background:var(--warn)"></span>Known debt · be honest</div>
+    <h2>What's thin right now</h2>
+    <div class="debt">
+      <div class="d"><span class="m">!</span><span>The <b>remote McpAgent fallback</b> (URL-only agents) compiles but is untested live — only the bridge path is exercised.</span></div>
+      <div class="d"><span class="m">!</span><span><b>No CI / automated tests</b> — everything was verified by hand. Add a smoke-test workflow before iterating fast.</span></div>
+      <div class="d"><span class="m">!</span><span><b>Anonymous-token model</b> is zero-friction but unauthenticated — fine for now, but it's why caps (#3) and abuse handling (#6) matter.</span></div>
+      <div class="d"><span class="m">!</span><span><b>Install is a local path</b> until the npm publish (#1) lands.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    protocontent · next steps · companion to the
+    <a href="architecture-plan.html">architecture plan</a> and
+    <a href="product-spec.html">product spec</a> (same space).
+    Generated as a self-contained <code>.html</code> artifact — and published on protocontent itself.
+  </footer>
+</div>
+<script>
+  function toggleTheme(){
+    const r=document.documentElement, dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('ttbtn').textContent=dark?'◐ Dark':'◑ Light';
+  }
+</script>
+</body>
+</html>
