@@ -1,37 +1,53 @@
-// Public content serving for *.protocontent.com.
+// Public content serving for *.protocontent.app (the isolated content origin).
 //
 // The subdomain label IS the spaceId. Serving is fully stateless in the Worker
 // (R2 + D1); the Durable Object is only consulted for the live WebSocket.
 //
-// Routes (host = <spaceId>.protocontent.com):
+// Routes (host = <spaceId>.protocontent.app):
 //   GET /              -> first-party live session index page
 //   GET /__list        -> JSON list of artifacts (for the index to refetch)
 //   GET /__live        -> WebSocket upgrade, routed to the Space DO
 //   GET /:name         -> serve the artifact entry (or single file)
 //   GET /:name/*assets -> serve a file relative to the artifact
 //
-// Untrusted-content artifact responses carry a restrictive CSP + nosniff +
-// noindex. The first-party index page gets only noindex (permissive CSP).
+// Untrusted artifact responses carry a CSP `sandbox` (opaque origin -> no
+// cookies/storage = PSL-free inter-artifact isolation) + nosniff + noindex.
+// The first-party index page is NOT sandboxed (it needs same-origin WS/fetch).
 
 import type { Env } from "./types";
 import { getSpace, listArtifacts, artifactUpdatedAt, resolveFile, getArtifact } from "./db";
 import { renderSpacePage, type SpacePageArtifact } from "./space-page";
 import { json } from "./util";
 
-/** Restrictive CSP applied to served (untrusted) artifact bytes. */
-const ARTIFACT_CSP = [
-  "default-src 'none'",
-  "script-src 'unsafe-inline' 'unsafe-eval' blob:",
-  "style-src 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "media-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  "frame-src 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'self'",
-].join("; ");
+/**
+ * Restrictive CSP applied to served (untrusted) artifact bytes.
+ *
+ * The `sandbox` directive (with NO `allow-same-origin`) forces an OPAQUE origin,
+ * so the document cannot read or set cookies / localStorage. That's what isolates
+ * artifacts from each other WITHOUT relying on the Public Suffix List: even though
+ * every *.protocontent.app subdomain is the same registrable site, a sandboxed
+ * artifact has no cookie/storage access at all, so it can't write a
+ * `Domain=.protocontent.app` cookie that bleeds onto siblings.
+ *
+ * Under an opaque origin `'self'` matches nothing, so we allow the artifact's OWN
+ * origin explicitly — that lets folder artifacts load their relative assets.
+ */
+function artifactCsp(origin: string): string {
+  return [
+    "sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-top-navigation-by-user-activation",
+    "default-src 'none'",
+    `script-src 'unsafe-inline' 'unsafe-eval' blob: ${origin}`,
+    `style-src 'unsafe-inline' ${origin}`,
+    `img-src ${origin} data: blob:`,
+    `media-src ${origin} data: blob:`,
+    `font-src ${origin} data:`,
+    `connect-src ${origin}`,
+    `frame-src ${origin}`,
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    `form-action ${origin}`,
+  ].join("; ");
+}
 
 function notFound(): Response {
   return new Response("Not found", {
@@ -123,12 +139,14 @@ export async function handleContent(
   const headers = new Headers();
   headers.set("content-type", file.content_type);
   headers.set("content-length", String(file.bytes));
-  // Untrusted-content protections (set as HTTP headers, not meta tags).
-  headers.set("content-security-policy", ARTIFACT_CSP);
+  // Untrusted-content protections (set as HTTP headers, not meta tags). The CSP
+  // `sandbox` directive gives the document an opaque origin (no cookies/storage),
+  // which is our PSL-free inter-artifact isolation. Cookies are also never set on
+  // artifact responses (we build headers from scratch — nothing copied from R2).
+  headers.set("content-security-policy", artifactCsp(`https://${url.host}`));
   headers.set("x-content-type-options", "nosniff");
   headers.set("x-robots-tag", "noindex");
   headers.set("cache-control", "public, max-age=60");
-  // Mark sandboxing of script via header-level frame protections already set.
 
   if (request.method === "HEAD") {
     return new Response(null, { status: 200, headers });
