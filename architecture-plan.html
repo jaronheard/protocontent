@@ -590,11 +590,12 @@
       <div class="grid g2" style="margin-top:14px">
         <div class="card"><h3 style="margin-top:0">① Isolated content origin</h3>
           <p class="muted" style="margin:0">Artifacts on <code>*.protocontent.app</code> — a separate registrable
-            domain from the <code>.com</code> control plane (<code>api.</code>/<code>mcp.</code>, no cookies). Different
-            site → no crossover. <b>Remaining:</b> PSL-list <code>protocontent.app</code> for inter-artifact isolation.</p></div>
-        <div class="card"><h3 style="margin-top:0">② Sandboxed iframe (embeds)</h3>
-          <p class="muted" style="margin:0">When embedded, render inside <code>&lt;iframe sandbox&gt;</code>
-            without <code>allow-same-origin</code>; re-grant scripts/forms selectively. The Claude Artifacts model.</p></div>
+            domain from the <code>.com</code> control plane (<code>api.</code>/<code>mcp.</code>, no cookies). Inter-artifact
+            cookie isolation is achieved <b>PSL-free</b> (see ②), so the slow PSL petition is no longer needed.</p></div>
+        <div class="card"><h3 style="margin-top:0">② CSP sandbox = opaque origin <span style="color:var(--good);font-size:12px">✓ shipped</span></h3>
+          <p class="muted" style="margin:0">Every untrusted artifact is served with <code>CSP: sandbox allow-scripts…</code>
+            (no <code>allow-same-origin</code>) → an opaque origin with no cookie/storage access. The PSL-free substitute
+            for inter-artifact isolation — and stronger (per-document, not per-site). The first-party index isn't sandboxed.</p></div>
         <div class="card"><h3 style="margin-top:0">③ CSP via HTTP headers</h3>
           <p class="muted" style="margin:0">The Worker sets <code>connect-src</code>/<code>script-src</code> to
             curb exfiltration — as a <b>header</b>, never a <code>&lt;meta&gt;</code> tag (meta-only CSP in an
