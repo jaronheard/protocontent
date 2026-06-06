@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 
@@ -98,33 +98,29 @@ const NOUNS = [
   "beacon", "compass", "lantern", "anchor", "pebble", "ripple", "breeze", "echo",
 ];
 
-function pick<T>(arr: T[], index: number): T {
-  return arr[index % arr.length];
+const B32 = "abcdefghijklmnopqrstuvwxyz234567";
+
+/** A cryptographically-random DNS-safe token of `len` base32 chars (~5 bits each). */
+function randomToken(len: number): string {
+  const bytes = randomBytes(len);
+  let out = "";
+  for (let i = 0; i < len; i++) out += B32[bytes[i] & 31];
+  return out;
 }
 
 /**
- * Generate a DNS-safe space id of the form `word-word-xxx`
- * (e.g. `amber-canyon-7f3`). When `seed` is provided the result is
- * deterministic (so it lines up with an agent thread/session id);
- * otherwise it is random.
+ * Generate a DNS-safe space id like `quiet-harbor-3kf9q…` — two random words
+ * for a little readability, plus a 22-char crypto-random suffix (~110 bits).
+ *
+ * The id is the capability that grants access to a space, so it must be
+ * UNGUESSABLE and is never derived from anything public (e.g. the agent session
+ * id). Per-thread stability is handled by caching this random id in
+ * ~/.protocontent/spaces.json (see config.ts), NOT by seeding it.
  */
-export function generateSpaceId(seed?: string): string {
-  if (seed && seed.length > 0) {
-    const hash = createHash("sha256").update(seed).digest();
-    const adjIndex = hash.readUInt16BE(0);
-    const nounIndex = hash.readUInt16BE(2);
-    // 3-char base36 suffix derived from the next bytes.
-    const suffixNum = hash.readUInt32BE(4) % (36 * 36 * 36);
-    const suffix = suffixNum.toString(36).padStart(3, "0").slice(-3);
-    return `${pick(ADJECTIVES, adjIndex)}-${pick(NOUNS, nounIndex)}-${suffix}`;
-  }
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const suffix = Math.floor(Math.random() * (36 * 36 * 36))
-    .toString(36)
-    .padStart(3, "0")
-    .slice(-3);
-  return `${adj}-${noun}-${suffix}`;
+export function generateSpaceId(): string {
+  const adj = ADJECTIVES[randomInt(ADJECTIVES.length)];
+  const noun = NOUNS[randomInt(NOUNS.length)];
+  return `${adj}-${noun}-${randomToken(22)}`;
 }
 
 // --- directory walk ---------------------------------------------------------
