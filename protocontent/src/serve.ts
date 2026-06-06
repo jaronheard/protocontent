@@ -17,6 +17,7 @@
 import type { Env } from "./types";
 import { getSpace, listArtifacts, artifactUpdatedAt, resolveFile, getArtifact } from "./db";
 import { renderSpacePage, type SpacePageArtifact } from "./space-page";
+import { renderViewerShell } from "./viewer-shell";
 import { json } from "./util";
 
 /**
@@ -148,6 +149,40 @@ export async function handleContent(
   if (vParam) {
     const v = parseInt(vParam, 10);
     if (Number.isFinite(v) && v > 0) version = v;
+  }
+
+  // --- Trusted viewer shell vs. raw artifact bytes ---
+  // A top-level browser navigation to the artifact's ENTRY document gets the
+  // trusted first-party shell (frames the raw artifact + renders the badge).
+  // Everything else — `?raw=1`, iframe/embed dests, sub-path assets, bots and
+  // unfurlers (no Sec-Fetch-Dest), HEAD, old browsers — gets the unchanged raw
+  // bytes with the original sandbox CSP, byte-for-byte. The framed raw entry is
+  // at the same base path (`/:name?raw=1`), so relative-asset resolution is
+  // preserved.
+  const isRaw = url.searchParams.get("raw") === "1";
+  const isEntry = relUnderArtifact === "";
+  const wantsShell =
+    isEntry &&
+    !isRaw &&
+    request.method === "GET" &&
+    request.headers.get("sec-fetch-dest") === "document";
+  if (wantsShell) {
+    const { html, csp } = renderViewerShell({
+      spaceId,
+      name,
+      version,
+      host: url.host,
+      k: url.searchParams.get("k"),
+    });
+    return new Response(html, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "content-security-policy": csp,
+        "x-content-type-options": "nosniff",
+        "x-robots-tag": "noindex",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   const file = await resolveFile(env, spaceId, name, version, relUnderArtifact);

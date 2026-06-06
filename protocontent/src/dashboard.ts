@@ -66,14 +66,16 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     <div class="err" id="err" hidden></div>
   </div>
 
+  <div id="who" class="muted" hidden></div>
   <div id="result"></div>
 
   <footer>protocontent · <a href="https://github.com/jaronheard/protocontent">source</a> · the token-based dashboard; GitHub sign-in is an opt-in (set GITHUB_CLIENT_ID/SECRET to enable).</footer>
 </div>
 <script>
-  var tokEl=document.getElementById('tok'), errEl=document.getElementById('err'), resEl=document.getElementById('result');
+  var tokEl=document.getElementById('tok'), errEl=document.getElementById('err'), resEl=document.getElementById('result'), whoEl=document.getElementById('who');
   var saved=localStorage.getItem('pc_token'); if(saved) tokEl.value=saved;
   function showErr(m){ errEl.textContent=m; errEl.hidden=!m; }
+  function showWho(m){ if(!whoEl) return; whoEl.textContent=m; whoEl.hidden=!m; }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function timeAgo(ms){ var d=(Date.now()-ms)/1000; if(d<60)return'just now'; if(d<3600)return Math.floor(d/60)+'m ago'; if(d<86400)return Math.floor(d/3600)+'h ago'; return Math.floor(d/86400)+'d ago'; }
   async function load(){
@@ -100,9 +102,31 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }).join('');
     resEl.innerHTML='<div class="card">'+rows+'</div>';
   }
+  // After the GitHub redirect-back the pc_session cookie is set on this origin.
+  // Show "Signed in as X" and, if we hold a project token, auto-link the identity
+  // to the project (so future claims need only the cookie). All defensive.
+  async function checkSession(){
+    try{
+      var r=await fetch('/v1/me',{ credentials:'include' });
+      if(!r.ok) return;
+      var me=await r.json();
+      if(!me || !me.login){ showWho(''); return; }
+      showWho('Signed in as '+esc(me.login)+'.');
+      var t=(tokEl.value||'').trim();
+      if(!t) return;
+      try{
+        var cr=await fetch('/v1/claim',{ method:'POST', credentials:'include', headers:{ authorization:'Bearer '+t } });
+        if(cr.ok){
+          var c=await cr.json();
+          if(c && c.ok){ showWho('Signed in as '+esc(me.login)+' — claimed '+c.spaces+' space'+(c.spaces===1?'':'s')+'.'); }
+        }
+      }catch(e){}
+    }catch(e){}
+  }
   document.getElementById('load').addEventListener('click', load);
   document.getElementById('forget').addEventListener('click', function(){ localStorage.removeItem('pc_token'); tokEl.value=''; resEl.innerHTML=''; showErr(''); });
   document.getElementById('gh').addEventListener('click', function(){ window.location.href='/v1/auth/github'; });
+  checkSession();
   if(saved) load();
 </script>
 </body>

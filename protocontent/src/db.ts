@@ -48,11 +48,46 @@ export async function createProject(env: Env): Promise<{ token: string; projectI
 export async function projectForToken(env: Env, token: string): Promise<ProjectRow | null> {
   const tokenHash = await sha256Hex(token);
   const row = await env.DB.prepare(
-    `SELECT id, token_hash, created_at FROM projects WHERE token_hash = ?`,
+    `SELECT id, token_hash, created_at, github_user_id, github_login, github_avatar
+     FROM projects WHERE token_hash = ?`,
   )
     .bind(tokenHash)
     .first<ProjectRow>();
   return row ?? null;
+}
+
+/** Fetch a project by id (including its linked GitHub identity), or null. */
+export async function getProject(env: Env, projectId: string): Promise<ProjectRow | null> {
+  const row = await env.DB.prepare(
+    `SELECT id, token_hash, created_at, github_user_id, github_login, github_avatar
+     FROM projects WHERE id = ?`,
+  )
+    .bind(projectId)
+    .first<ProjectRow>();
+  return row ?? null;
+}
+
+/** Link a GitHub identity to a project (so its owner can claim spaces). */
+export async function linkProjectGithub(
+  env: Env,
+  projectId: string,
+  identity: { uid: number; login: string; avatar: string },
+): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE projects SET github_user_id = ?, github_login = ?, github_avatar = ? WHERE id = ?`,
+  )
+    .bind(identity.uid, identity.login, identity.avatar, projectId)
+    .run();
+}
+
+/** Count the spaces owned by a project (informational, used by /v1/claim). */
+export async function countProjectSpaces(env: Env, projectId: string): Promise<number> {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM spaces WHERE project_id = ?`,
+  )
+    .bind(projectId)
+    .first<{ count: number }>();
+  return row?.count ?? 0;
 }
 
 // ---------------------------------------------------------------------------
