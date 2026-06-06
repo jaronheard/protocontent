@@ -16,6 +16,8 @@ import {
   keepArtifact,
   artifactUpdatedAt,
   spaceOrigin,
+  setSpaceBlocked,
+  insertReport,
 } from "./db";
 import { json, errorJson, slugify, genSpaceId } from "./util";
 
@@ -116,6 +118,19 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
         return errorJson("rate limit exceeded — slow down", 429);
       }
       return await handlePublish(request, env, ctx);
+    }
+
+    // POST /v1/report (public) -> record an abuse report.
+    if (path === "/v1/report" && request.method === "POST") {
+      if (!(await rateLimit(env, `report:${clientIp(request)}`, 20, 3600))) {
+        return errorJson("rate limit exceeded", 429);
+      }
+      return await handleReport(request, env);
+    }
+
+    // POST /v1/admin/block (admin secret) -> moderation kill switch.
+    if (path === "/v1/admin/block" && request.method === "POST") {
+      return await handleAdminBlock(request, env);
     }
 
     // /v1/spaces/:spaceId/...
@@ -238,6 +253,42 @@ async function handleList(request: Request, env: Env, spaceId: string): Promise<
   }));
   const spaceUrl = space.index_token ? `${origin}/?k=${space.index_token}` : `${origin}/`;
   return json({ artifacts, spaceUrl });
+}
+
+async function handleReport(request: Request, env: Env): Promise<Response> {
+  const body = (await request.json().catch(() => null)) as
+    | { url?: string; spaceId?: string; reason?: string }
+    | null;
+  if (!body || (!body.url && !body.spaceId)) {
+    throw new ApiError("url or spaceId required", 400);
+  }
+  let spaceId = body.spaceId ? String(body.spaceId) : "";
+  const url = body.url ? String(body.url).slice(0, 500) : "";
+  if (!spaceId && url) {
+    try {
+      spaceId = new URL(url).hostname.split(".")[0];
+    } catch {
+      // ignore unparseable urls
+    }
+  }
+  const reason = typeof body.reason === "string" ? body.reason.slice(0, 2000) : "";
+  await insertReport(env, { spaceId, url, reason, ip: clientIp(request) });
+  console.log("[report]", JSON.stringify({ spaceId, url, reason: reason.slice(0, 200) }));
+  return json({ ok: true });
+}
+
+async function handleAdminBlock(request: Request, env: Env): Promise<Response> {
+  if (!env.ADMIN_TOKEN) return errorJson("admin not configured", 503);
+  const auth = bearer(request);
+  if (!auth || auth !== env.ADMIN_TOKEN) return errorJson("forbidden", 403);
+  const body = (await request.json().catch(() => null)) as
+    | { spaceId?: string; blocked?: boolean }
+    | null;
+  if (!body?.spaceId) throw new ApiError("spaceId required", 400);
+  const blocked = body.blocked !== false; // default: block
+  const ok = await setSpaceBlocked(env, String(body.spaceId), blocked);
+  if (!ok) throw new ApiError("space not found", 404);
+  return json({ ok: true, spaceId: body.spaceId, blocked });
 }
 
 async function handleHistory(

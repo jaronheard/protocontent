@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS spaces (
   project_id  TEXT,
   label       TEXT,
   index_token TEXT,
+  blocked     INTEGER DEFAULT 0,
   created_at  INTEGER
 );
 
@@ -35,6 +36,15 @@ CREATE TABLE IF NOT EXISTS files (
   content_type  TEXT,
   bytes         INTEGER,
   created_at    INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id          TEXT PRIMARY KEY,
+  space_id    TEXT,
+  url         TEXT,
+  reason      TEXT,
+  ip          TEXT,
+  created_at  INTEGER
 );
 
 -- Helpful indexes.
