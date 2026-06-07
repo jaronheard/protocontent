@@ -17,13 +17,18 @@
   // on the zone (Universal SSL covers *.protocontent.com automatically).
   //
   // The bare apex (protocontent.com / protocontent.app) is NOT matched by the
-  // "*." wildcard, so it gets its own route — that's what serves the landing
-  // page (src/index.ts, "Apex / www"). Needs a proxied root DNS record on each
-  // zone. (`www.` is already covered by the wildcard above.)
+  // "*." wildcard, so it's declared as a Custom Domain. A Custom Domain (unlike
+  // a route) provisions its own proxied DNS record + edge cert automatically, so
+  // the apex resolves without a manual root DNS record. It serves the landing
+  // page (src/index.ts, "Apex / www"). (`www.` is covered by the wildcard.)
+  //
+  // NOTE: a hostname can be claimed by a Custom Domain OR a route, never both —
+  // an apex `protocontent.com/*` route here would conflict with the Custom
+  // Domain and block it from provisioning.
   "routes": [
-    { "pattern": "protocontent.com/*", "zone_name": "protocontent.com" },
+    { "pattern": "protocontent.com", "custom_domain": true },
     { "pattern": "*.protocontent.com/*", "zone_name": "protocontent.com" },
-    { "pattern": "protocontent.app/*", "zone_name": "protocontent.app" },
+    { "pattern": "protocontent.app", "custom_domain": true },
     { "pattern": "*.protocontent.app/*", "zone_name": "protocontent.app" }
   ],
 
