@@ -32,6 +32,11 @@ import { json } from "./util";
  *
  * Under an opaque origin `'self'` matches nothing, so we allow the artifact's OWN
  * origin explicitly — that lets folder artifacts load their relative assets.
+ *
+ * `frame-ancestors` is set to the artifact's own origin (NOT `'none'`) so the
+ * same-subdomain trusted viewer shell can embed the raw artifact in its iframe
+ * (see viewer-shell.ts). Every OTHER origin — third-party sites and sibling
+ * spaces' subdomains — is still blocked, preserving clickjacking protection.
  */
 function artifactCsp(origin: string): string {
   return [
@@ -44,7 +49,7 @@ function artifactCsp(origin: string): string {
     `font-src ${origin} data:`,
     `connect-src ${origin}`,
     `frame-src ${origin}`,
-    "frame-ancestors 'none'",
+    `frame-ancestors ${origin}`,
     "base-uri 'none'",
     `form-action ${origin}`,
   ].join("; ");
