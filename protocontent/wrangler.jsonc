@@ -15,8 +15,15 @@
   // One wildcard route covers api., mcp., AND every <space>.protocontent.com —
   // the Worker dispatches by the Host header. Requires a proxied "*" DNS record
   // on the zone (Universal SSL covers *.protocontent.com automatically).
+  //
+  // The bare apex (protocontent.com / protocontent.app) is NOT matched by the
+  // "*." wildcard, so it gets its own route — that's what serves the landing
+  // page (src/index.ts, "Apex / www"). Needs a proxied root DNS record on each
+  // zone. (`www.` is already covered by the wildcard above.)
   "routes": [
+    { "pattern": "protocontent.com/*", "zone_name": "protocontent.com" },
     { "pattern": "*.protocontent.com/*", "zone_name": "protocontent.com" },
+    { "pattern": "protocontent.app/*", "zone_name": "protocontent.app" },
     { "pattern": "*.protocontent.app/*", "zone_name": "protocontent.app" }
   ],
 

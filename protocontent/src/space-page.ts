@@ -1,10 +1,16 @@
 // First-party live session index page for a space.
 //
 // This HTML is served from the protocontent origin itself (GET / on a
-// *.protocontent.com host), so it is first-party and its CSP can be
+// *.protocontent.app host), so it is first-party and its CSP can be
 // permissive. It lists the space's artifacts and opens a WebSocket to
 // wss://<host>/__live; on any message it re-fetches GET /__list and re-renders.
 // A manual "Refresh" button provides graceful degradation if the socket drops.
+//
+// Visual language: the "calm aurora frosted-glass" system shared with the
+// trusted viewer-shell badge (see brand.ts / viewer-shell.ts), so the chrome
+// that floats over an artifact and the index it links to read as one product.
+
+import { BRAND_BASE_CSS, FAVICON, MARK } from "./brand";
 
 export interface SpacePageArtifact {
   name: string;
@@ -26,7 +32,10 @@ export function renderSpacePage(
   label: string | null,
   artifacts: SpacePageArtifact[],
 ): string {
-  const title = label ? `${escapeHtml(label)} · protocontent` : `${escapeHtml(spaceId)} · protocontent`;
+  const heading = label ? escapeHtml(label) : escapeHtml(spaceId);
+  const title = label
+    ? `${escapeHtml(label)} · protocontent`
+    : `${escapeHtml(spaceId)} · protocontent`;
   // Serialize initial data so the page renders instantly without a fetch.
   const initial = JSON.stringify(artifacts).replace(/</g, "\\u003c");
 
@@ -34,73 +43,80 @@ export function renderSpacePage(
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>${title}</title>
+${FAVICON}
 <style>
-  :root { color-scheme: light dark; }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: #0b0d10;
-    color: #e6e9ee;
-  }
-  @media (prefers-color-scheme: light) {
-    body { background: #f7f8fa; color: #1b1f24; }
-    .card { background: #fff; border-color: #e3e6ea; }
-    a { color: #1351d8; }
-    .muted { color: #6b7280; }
-    header .dot { background: #16a34a; }
-  }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
-  header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-  header h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-  header .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.5); animation: pulse 2s infinite; }
-  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.45);} 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0);} 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0);} }
-  .sub { margin: 0 0 24px; }
-  .muted { color: #93a0b2; font-size: 13px; }
-  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .toolbar { margin-bottom: 14px; }
-  button {
-    font: inherit; font-size: 13px; cursor: pointer;
-    background: transparent; color: inherit;
-    border: 1px solid currentColor; border-radius: 8px;
-    padding: 5px 12px; opacity: .8;
-  }
-  button:hover { opacity: 1; }
-  ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-  li.card {
-    border: 1px solid #232a33; border-radius: 12px;
-    background: #11151b; padding: 14px 16px;
-  }
-  li.card a { font-weight: 600; text-decoration: none; font-size: 15px; word-break: break-word; }
-  li.card a:hover { text-decoration: underline; }
-  a { color: #7aa2ff; }
-  .empty { padding: 40px 0; text-align: center; }
-  .status { font-size: 12px; }
-  .status.live { color: #22c55e; }
-  .status.off { color: #f59e0b; }
-  footer { margin-top: 40px; font-size: 12px; }
+${BRAND_BASE_CSS}
+  .wrap{max-width:720px;margin:0 auto;padding:44px 20px 96px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:32px;flex-wrap:wrap;}
+  .brand{display:inline-flex;align-items:center;gap:9px;color:var(--ink);font-weight:700;letter-spacing:-.01em;}
+  .brand:hover{text-decoration:none;}
+  .brand .mark{--mark:24px;}
+  .brand-name{font-size:14.5px;}
+  .bar{display:inline-flex;align-items:center;gap:11px;padding:6px 6px 6px 13px;border-radius:13px;}
+  .status{font-size:12.5px;font-weight:600;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  .status.off{color:#b06a1f;}
+
+  .head{margin-bottom:26px;}
+  .head h1{font-size:26px;line-height:1.2;letter-spacing:-.022em;font-weight:800;margin:0 0 7px;word-break:break-word;}
+  .sub{margin:0;color:var(--ink-faint);font-size:13.5px;}
+  .sub code{font-family:var(--mono);font-size:12.5px;background:rgba(255,255,255,.5);padding:2px 7px;border-radius:7px;box-shadow:0 0 0 1px var(--edge);}
+
+  ul.list{list-style:none;margin:0;padding:0;display:grid;gap:11px;}
+  li.card{min-width:0;border-radius:14px;transition:transform .16s var(--ease),box-shadow .2s var(--ease);}
+  li.card:hover{transform:translateY(-2px);
+    box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset,0 24px 48px -22px rgba(20,60,58,.55),0 5px 14px -5px rgba(20,60,58,.26);}
+  a.row{display:flex;align-items:center;gap:14px;padding:15px 17px;border-radius:inherit;color:var(--ink);min-width:0;}
+  a.row:hover{text-decoration:none;}
+  .name{flex:1;min-width:0;font-size:15px;font-weight:650;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .when{font-size:12.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums;white-space:nowrap;flex:none;}
+  .go{width:15px;height:15px;flex:none;color:var(--ink-faint);opacity:.5;
+    background:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M9 6l6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M9 6l6 6-6 6'/%3E%3C/svg%3E") center/contain no-repeat;
+    transition:transform .16s var(--ease),opacity .16s ease;}
+  li.card:hover .go{opacity:.9;transform:translateX(3px);color:var(--ink-soft);}
+
+  .empty{padding:40px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .empty .mark{--mark:34px;margin-bottom:6px;}
+  .empty p{margin:0;font-size:15px;font-weight:600;color:var(--ink);}
+  .empty .hint{font-size:13px;font-weight:500;color:var(--ink-faint);max-width:34ch;}
+
+  footer{margin-top:34px;color:var(--ink-faint);font-size:12.5px;}
 </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <span class="dot" id="dot" title="live"></span>
-      <h1>${label ? escapeHtml(label) : escapeHtml(spaceId)}</h1>
-    </header>
-    <p class="sub muted">Live session on <code>${escapeHtml(spaceId)}.protocontent.app</code></p>
-
-    <div class="row toolbar">
-      <span class="status live" id="status">live</span>
-      <button id="refresh" type="button">Refresh</button>
+    <div class="topbar">
+      <a class="brand" href="https://protocontent.com" target="_blank" rel="noopener">
+        ${MARK}<span class="brand-name">protocontent</span>
+      </a>
+      <div class="bar glass" role="status" aria-live="polite">
+        <span class="live-dot" id="dot" title="live" aria-hidden="true"></span>
+        <span class="status live" id="status">live</span>
+        <button class="btn" id="refresh" type="button" aria-label="Refresh artifact list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+          <span>Refresh</span>
+        </button>
+      </div>
     </div>
 
-    <ul class="list" id="list"></ul>
-    <div class="empty muted" id="empty" hidden>No artifacts published yet.</div>
+    <header class="head">
+      <h1>${heading}</h1>
+      <p class="sub">Live session · <code>${escapeHtml(spaceId)}.protocontent.app</code></p>
+    </header>
 
-    <footer class="muted">Updates automatically as new artifacts are published.</footer>
+    <ul class="list" id="list"></ul>
+    <div class="empty glass" id="empty" hidden>
+      ${MARK}
+      <p>Nothing published yet.</p>
+      <p class="hint">Publish something with the protocontent tool and it'll appear here — live, no refresh needed.</p>
+    </div>
+
+    <footer>Updates automatically as your agent publishes.</footer>
   </div>
 
 <script>
@@ -128,18 +144,23 @@ export function renderSpacePage(
     emptyEl.hidden = true;
     items.forEach(function (a) {
       var li = document.createElement('li');
-      li.className = 'card';
-      var row = document.createElement('div');
-      row.className = 'row';
+      li.className = 'card glass';
       var link = document.createElement('a');
+      link.className = 'row';
       link.href = a.url;
-      link.textContent = a.name;
-      var time = document.createElement('span');
-      time.className = 'muted';
-      time.textContent = fmtRel(a.updatedAt);
-      row.appendChild(link);
-      row.appendChild(time);
-      li.appendChild(row);
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = a.name;
+      var when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = fmtRel(a.updatedAt);
+      var go = document.createElement('span');
+      go.className = 'go';
+      go.setAttribute('aria-hidden', 'true');
+      link.appendChild(name);
+      link.appendChild(when);
+      link.appendChild(go);
+      li.appendChild(link);
       listEl.appendChild(li);
     });
   }
@@ -154,7 +175,8 @@ export function renderSpacePage(
   function setStatus(live) {
     statusEl.textContent = live ? 'live' : 'offline';
     statusEl.className = 'status ' + (live ? 'live' : 'off');
-    dotEl.style.background = live ? '#22c55e' : '#f59e0b';
+    dotEl.className = 'live-dot' + (live ? '' : ' off');
+    dotEl.title = live ? 'live' : 'offline';
   }
 
   render(initial);

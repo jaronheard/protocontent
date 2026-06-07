@@ -14,6 +14,7 @@
 import type { Env } from "./types";
 import { handleApi } from "./api";
 import { handleContent } from "./serve";
+import { renderLandingPage } from "./landing-page";
 import { ProtoMcpAgent } from "./mcp";
 import { sweepExpired } from "./db";
 
@@ -73,14 +74,28 @@ export default {
       }
     }
 
-    // 5. Apex / www on either domain: minimal landing.
+    // 5. Apex / www on either domain: the first-party landing page.
     if (
       hostname === CONTROL_DOMAIN || hostname === CONTENT_DOMAIN ||
       hostname === `www.${CONTROL_DOMAIN}` || hostname === `www.${CONTENT_DOMAIN}`
     ) {
-      return new Response("protocontent", {
+      // Only the document root is the landing; unknown paths on the apex 404 so
+      // we don't shadow future routes or pretend stray paths exist.
+      if (url.pathname !== "/" && url.pathname !== "") {
+        return new Response("not found", {
+          status: 404,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+      const { html, csp } = renderLandingPage();
+      return new Response(html, {
         status: 200,
-        headers: { "content-type": "text/plain; charset=utf-8" },
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "content-security-policy": csp,
+          "x-content-type-options": "nosniff",
+          "cache-control": "no-store",
+        },
       });
     }
 
