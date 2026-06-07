@@ -15,6 +15,30 @@ const INSTALL_CMD = "claude mcp add protocontent -- npx -y protocontent";
 const SOURCE_URL = "https://github.com/jaronheard/protocontent";
 const NPM_URL = "https://www.npmjs.com/package/protocontent";
 
+// Example artifacts — real, live protocontent links. They ARE the pitch: each
+// is HTML an agent made, reachable from any session, device, or teammate by URL.
+// (Kept artifacts in the project's space; swap for a curated showcase anytime.)
+const EXAMPLES = [
+  {
+    kind: "Design exploration",
+    desc: "A UI study you can open and send.",
+    url: "https://teal-ridge-jsbmhggy5ageorz375zdcx.protocontent.app/example-design-exploration",
+  },
+  {
+    kind: "PR review",
+    desc: "Findings, in one shareable link.",
+    url: "https://teal-ridge-jsbmhggy5ageorz375zdcx.protocontent.app/example-pr-review",
+  },
+  {
+    kind: "Plan",
+    desc: "Scope and steps before the code.",
+    url: "https://teal-ridge-jsbmhggy5ageorz375zdcx.protocontent.app/example-plan",
+  },
+];
+
+const ARROW_SVG =
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg>`;
+
 export function renderLandingPage(): { html: string; csp: string } {
   const nonce = generateNonce();
   const csp = [
@@ -42,18 +66,33 @@ ${BRAND_BASE_CSS}
   body{display:flex;min-height:100dvh;}
   main{width:100%;max-width:600px;margin:auto;padding:56px 22px;text-align:center;}
 
-  .lockup{display:inline-flex;align-items:center;gap:13px;margin-bottom:30px;}
+  .lockup{display:inline-flex;align-items:center;gap:12px;margin-bottom:28px;}
   .lockup .mark{--mark:42px;}
   .lockup h1{font-size:30px;font-weight:800;letter-spacing:-.03em;margin:0;color:var(--ink);}
+  .alpha{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#0a5249;
+    align-self:flex-start;margin-top:3px;padding:3px 8px;border-radius:999px;
+    background:linear-gradient(135deg, rgba(155,232,255,.7), rgba(122,240,163,.62));
+    box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset;}
 
   .tagline{font-size:25px;line-height:1.28;font-weight:750;letter-spacing:-.02em;color:var(--ink);margin:0 0 16px;text-wrap:balance;}
-  .lede{font-size:15.5px;line-height:1.6;color:var(--ink-soft);margin:0 auto 26px;max-width:46ch;text-wrap:pretty;}
+  .lede{font-size:15.5px;line-height:1.6;color:var(--ink-soft);margin:0 auto 14px;max-width:48ch;text-wrap:pretty;}
+  .lede + .lede{margin-bottom:30px;color:var(--ink-faint);font-size:14.5px;}
 
-  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 30px;}
-  .chip{font-size:12px;font-weight:650;letter-spacing:.01em;color:var(--ink-soft);
-    padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.42);
-    box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.6) inset;display:inline-flex;align-items:center;gap:6px;}
-  .chip .live-dot{width:7px;height:7px;}
+  /* example artifacts — the proof. each is a real, live HTML link. */
+  .examples{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:0 0 32px;text-align:left;}
+  .ex{display:flex;flex-direction:column;gap:4px;padding:14px 15px 13px;border-radius:14px;color:var(--ink);min-width:0;
+    transition:transform .16s var(--ease),box-shadow .2s var(--ease);}
+  .ex:hover{transform:translateY(-2px);text-decoration:none;
+    box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset,0 22px 44px -22px rgba(20,60,58,.5),0 4px 12px -5px rgba(20,60,58,.24);}
+  .ex-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;}
+  .ex-tag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--ink-faint);
+    padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.5);box-shadow:0 0 0 1px var(--edge);}
+  .ex-arrow{width:14px;height:14px;color:var(--ink-faint);opacity:.6;transition:transform .16s var(--ease),opacity .16s ease;}
+  .ex-arrow svg{width:100%;height:100%;display:block;}
+  .ex:hover .ex-arrow{opacity:.95;transform:translate(2px,-2px);color:var(--ink-soft);}
+  .ex-kind{font-size:13.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+  .ex-desc{font-size:12px;line-height:1.4;color:var(--ink-faint);}
+  @media (max-width:560px){.examples{grid-template-columns:1fr;}}
 
   .install{padding:7px 7px 7px 16px;border-radius:14px;display:flex;align-items:center;gap:10px;
     max-width:520px;margin:0 auto 14px;text-align:left;}
@@ -83,15 +122,21 @@ ${BRAND_BASE_CSS}
 </head>
 <body>
   <main>
-    <div class="lockup">${MARK}<h1>protocontent</h1></div>
+    <div class="lockup">${MARK}<h1>protocontent</h1><span class="alpha">alpha</span></div>
 
     <p class="tagline">A cloud scratchpad for your agents.</p>
-    <p class="lede">Your coding agent already writes files. protocontent gives them a URL instead of a repo — shareable and sandboxed. Plans, prototypes, dashboards, screenshots: watch them appear on a live session page the moment your agent makes them, and see exactly where one breaks.</p>
+    <p class="lede">Your agent makes HTML; protocontent hands it back as a URL. Paste it into another session, share it with a teammate, or open it on your phone from a remote run — the link comes with you across desktops, worktrees, and machines.</p>
+    <p class="lede">The cloud HTML is all you need. It's at its best while your agents are generating, and while you're working with rich content.</p>
 
-    <div class="chips">
-      <span class="chip">shareable URL</span>
-      <span class="chip">sandboxed</span>
-      <span class="chip"><span class="live-dot" aria-hidden="true"></span>live session</span>
+    <div class="examples">
+      ${EXAMPLES.map(
+        (e) =>
+          `<a class="ex glass" href="${e.url}" target="_blank" rel="noopener">` +
+          `<span class="ex-top"><span class="ex-tag">HTML</span><span class="ex-arrow" aria-hidden="true">${ARROW_SVG}</span></span>` +
+          `<span class="ex-kind">${e.kind}</span>` +
+          `<span class="ex-desc">${e.desc}</span>` +
+          `</a>`,
+      ).join("")}
     </div>
 
     <div class="install glass">

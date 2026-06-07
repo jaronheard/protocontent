@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR #247 review · acme/web</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#fbfcfc;
+    --ink:#1f2328;
+    --muted:#5b6470;
+    --faint:#838d99;
+    --line:#e6e9ec;
+    --line-strong:#d4d9dd;
+    --accent:#0c7a73;
+    --bug:#c0362c;
+    --bug-bg:#fbeceb;
+    --warn:#b45309;
+    --warn-bg:#fdf3e6;
+    --nit:#5d6b6a;
+    --nit-bg:#eef2f1;
+    --add:#1a7f37;
+    --del:#c0362c;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:780px;margin:0 auto;padding:32px 20px 64px;}
+
+  /* Header */
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;}
+  .repo{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.01em;}
+  .repo a{color:var(--accent);text-decoration:none;}
+  h1{font-size:23px;line-height:1.3;font-weight:650;margin:8px 0 14px;letter-spacing:-.01em;}
+  h1 .num{color:var(--faint);font-weight:500;}
+  .branch{
+    display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:7px;padding:5px 10px;
+  }
+  .branch .tip{color:var(--ink);font-weight:600;}
+  .branch .arrow{color:var(--faint);}
+  .meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--muted);}
+  .meta .author{font-weight:600;color:var(--ink);}
+  .agent-note{
+    display:inline-flex;align-items:center;gap:6px;
+    color:var(--accent);font-size:12.5px;font-weight:600;
+    background:rgba(12,122,115,.08);border-radius:20px;padding:3px 10px 3px 8px;
+  }
+  .agent-note svg{display:block;}
+
+  /* Verdict */
+  .verdict{
+    display:flex;align-items:flex-start;gap:14px;
+    margin:24px 0 28px;padding:16px 18px;
+    background:var(--bug-bg);border:1px solid #f0cbc7;border-radius:10px;
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;font-weight:700;letter-spacing:.02em;
+    border-radius:6px;padding:4px 10px;white-space:nowrap;text-transform:uppercase;
+  }
+  .badge.request{background:var(--bug);color:#fff;}
+  .verdict .v-body{font-size:14px;color:#7a2a23;}
+  .verdict .v-body strong{color:#5e201b;}
+
+  /* Section heads */
+  h2{
+    font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--faint);margin:34px 0 14px;
+  }
+
+  /* Files changed */
+  .files{border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .files .stat-line{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:9px 14px;background:var(--surface);border-bottom:1px solid var(--line);
+    font-size:13px;color:var(--muted);
+  }
+  .files .stat-line b{color:var(--ink);}
+  .file{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 14px;border-bottom:1px solid var(--line);
+  }
+  .file:last-child{border-bottom:0;}
+  .file .path{font-family:var(--mono);font-size:13px;color:var(--ink);overflow-wrap:anywhere;}
+  .counts{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12.5px;white-space:nowrap;}
+  .counts .add{color:var(--add);}
+  .counts .del{color:var(--del);}
+  .bar{display:inline-flex;gap:2px;}
+  .bar i{width:8px;height:8px;border-radius:2px;display:inline-block;}
+  .bar i.a{background:var(--add);}
+  .bar i.d{background:var(--del);}
+
+  /* Findings */
+  .finding{
+    border:1px solid var(--line);border-left-width:3px;border-radius:8px;
+    padding:14px 16px;margin-bottom:14px;
+  }
+  .finding.bug{border-left-color:var(--bug);}
+  .finding.warning{border-left-color:var(--warn);}
+  .finding.nit{border-left-color:var(--nit);}
+  .f-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .sev{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border-radius:5px;padding:2px 8px;}
+  .sev.bug{background:var(--bug-bg);color:var(--bug);}
+  .sev.warning{background:var(--warn-bg);color:var(--warn);}
+  .sev.nit{background:var(--nit-bg);color:var(--nit);}
+  .ref{font-family:var(--mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;}
+  .finding p{margin:0 0 8px;font-size:14px;}
+  .fix{font-size:13.5px;color:var(--muted);}
+  .fix b{color:var(--accent);font-weight:600;}
+
+  /* Code block */
+  .code{
+    background:#fafbfb;border:1px solid var(--line);border-radius:8px;
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;
+    margin:10px 0 4px;overflow-x:auto;
+  }
+  .code .cap{
+    display:block;padding:7px 14px;border-bottom:1px solid var(--line);
+    color:var(--faint);font-size:11.5px;background:var(--surface);
+  }
+  .code pre{margin:0;padding:10px 14px;}
+  .code .ln{display:block;white-space:pre;padding:0 4px;border-radius:3px;}
+  .code .ln.del{background:#fbeceb;color:#8a2820;}
+  .code .ln.add{background:#e9f5ec;color:#15662a;}
+  .code .ln.ctx{color:var(--muted);}
+
+  /* Footer */
+  .summary{
+    margin-top:34px;padding-top:20px;border-top:1px solid var(--line);
+    font-size:14px;color:var(--muted);
+  }
+  .summary b{color:var(--ink);}
+  .sig{margin-top:10px;font-size:12.5px;color:var(--faint);font-family:var(--mono);}
+
+  @media (max-width:520px){
+    .wrap{padding:22px 15px 48px;}
+    h1{font-size:20px;}
+    .file{flex-direction:column;align-items:flex-start;gap:6px;}
+    .verdict{flex-direction:column;gap:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="repo"><a href="#">acme/web</a> &middot; pull request</div>
+    <h1>Refactor session auth to short-lived tokens <span class="num">#247</span></h1>
+    <div class="branch">
+      <span class="tip">main</span>
+      <span class="arrow">&larr;</span>
+      <span>feature/short-lived-tokens</span>
+    </div>
+    <div class="meta">
+      <span><span class="author">@dmitri-k</span> wants to merge 14 commits</span>
+      <span class="agent-note">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M5 8h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></svg>
+        Reviewed by agent
+      </span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <span class="badge request">Request changes</span>
+    <div class="v-body">
+      The migration to short-lived access tokens is well structured, but two
+      <strong>blocking issues</strong> remain: refresh tokens are not rotated on use,
+      and a token-expiry check uses the wrong clock. Address the bug-level findings
+      below before merge.
+    </div>
+  </div>
+
+  <h2>Files changed</h2>
+  <div class="files">
+    <div class="stat-line">
+      <span><b>5 files</b> changed</span>
+      <span><b class="add" style="color:var(--add)">+248</b> &nbsp; <b class="del" style="color:var(--del)">&minus;96</b></span>
+    </div>
+
+    <div class="file">
+      <span class="path">src/auth/tokenService.ts</span>
+      <span class="counts"><span class="add">+132</span><span class="del">&minus;41</span>
+        <span class="bar"><i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i><i class="d"></i></span></span>
+    </div>
+    <div class="file">
+      <span class="path">src/auth/middleware/requireSession.ts</span>
+      <span class="counts"><span class="add">+44</span><span class="del">&minus;18</span>
+        <span class="bar"><i class="a"></i><i class="a"></i><i class="a"></i><i class="d"></i></span></span>
+    </div>
+    <div class="file">
+      <span class="path">src/auth/refreshStore.ts</span>
+      <span class="counts"><span class="add">+39</span><span class="del">&minus;7</span>
+        <span class="bar"><i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i></span></span>
+    </div>
+    <div class="file">
+      <span class="path">src/config/auth.ts</span>
+      <span class="counts"><span class="add">+21</span><span class="del">&minus;9</span>
+        <span class="bar"><i class="a"></i><i class="a"></i><i class="d"></i></span></span>
+    </div>
+    <div class="file">
+      <span class="path">test/auth/tokenService.test.ts</span>
+      <span class="counts"><span class="add">+12</span><span class="del">&minus;21</span>
+        <span class="bar"><i class="a"></i><i class="d"></i><i class="d"></i></span></span>
+    </div>
+  </div>
+
+  <h2>Findings</h2>
+
+  <div class="finding bug">
+    <div class="f-head">
+      <span class="sev bug">Bug</span>
+      <span class="ref">src/auth/refreshStore.ts:58</span>
+    </div>
+    <p>Refresh tokens are validated but never invalidated after use. A leaked
+      refresh token stays valid for its full 30-day TTL and can be replayed
+      indefinitely, defeating the point of short-lived access tokens.</p>
+    <div class="code">
+      <span class="cap">src/auth/refreshStore.ts — issueAccessToken()</span>
+<pre><span class="ln ctx">  const record = await store.find(refreshToken);</span>
+<span class="ln ctx">  if (!record || record.revoked) throw new AuthError("invalid_grant");</span>
+<span class="ln del">- // token reused as-is on every refresh</span>
+<span class="ln del">- return signAccessToken(record.userId);</span>
+<span class="ln add">+ // rotate: revoke old, mint a fresh refresh token</span>
+<span class="ln add">+ await store.revoke(record.id);</span>
+<span class="ln add">+ const next = await store.issue(record.userId);</span>
+<span class="ln add">+ return { access: signAccessToken(record.userId), refresh: next };</span></pre>
+    </div>
+    <p class="fix"><b>Suggested fix:</b> Rotate the refresh token on every exchange and revoke the prior token; reject reuse of a revoked token (replay detection).</p>
+  </div>
+
+  <div class="finding bug">
+    <div class="f-head">
+      <span class="sev bug">Bug</span>
+      <span class="ref">src/auth/tokenService.ts:91</span>
+    </div>
+    <p>Expiry is compared against <code style="font-family:var(--mono)">Date.now()</code>
+      (milliseconds) while the JWT <code style="font-family:var(--mono)">exp</code> claim
+      is in seconds. Every token reads as expired ~1000&times; too early, so sessions
+      drop almost immediately in production.</p>
+    <div class="code">
+      <span class="cap">src/auth/tokenService.ts — verify()</span>
+<pre><span class="ln del">- if (claims.exp &lt; Date.now()) throw new TokenExpiredError();</span>
+<span class="ln add">+ if (claims.exp &lt; Math.floor(Date.now() / 1000)) throw new TokenExpiredError();</span></pre>
+    </div>
+    <p class="fix"><b>Suggested fix:</b> Convert to seconds for the comparison, or use a single time helper shared by signing and verification.</p>
+  </div>
+
+  <div class="finding warning">
+    <div class="f-head">
+      <span class="sev warning">Warning</span>
+      <span class="ref">src/auth/middleware/requireSession.ts:27</span>
+    </div>
+    <p>The middleware swallows verification errors and falls through to an
+      anonymous session on any failure, including a tampered signature. A malformed
+      token should be a 401, not a silent downgrade.</p>
+    <p class="fix"><b>Suggested fix:</b> Distinguish "no token" (continue anonymous) from "invalid token" (respond 401) and log the verification error.</p>
+  </div>
+
+  <div class="finding warning">
+    <div class="f-head">
+      <span class="sev warning">Warning</span>
+      <span class="ref">src/config/auth.ts:14</span>
+    </div>
+    <p>Access-token TTL is hard-coded to <code style="font-family:var(--mono)">"15m"</code>
+      as a string and parsed ad hoc in two places. The two parsers disagree on
+      whitespace handling, which is fragile.</p>
+    <p class="fix"><b>Suggested fix:</b> Store the TTL as a number of seconds in config and parse once at load time.</p>
+  </div>
+
+  <div class="finding nit">
+    <div class="f-head">
+      <span class="sev nit">Nit</span>
+      <span class="ref">src/auth/tokenService.ts:140</span>
+    </div>
+    <p>Two removed tests covered the old long-lived-token path; their rotation
+      replacements are not yet added, so refresh rotation is currently untested.</p>
+    <p class="fix"><b>Suggested fix:</b> Add a test asserting that a reused refresh token is rejected after rotation.</p>
+  </div>
+
+  <div class="finding nit">
+    <div class="f-head">
+      <span class="sev nit">Nit</span>
+      <span class="ref">src/auth/refreshStore.ts:12</span>
+    </div>
+    <p>Imports are no longer ordered after the refactor and there is one unused
+      <code style="font-family:var(--mono)">crypto</code> import left over.</p>
+    <p class="fix"><b>Suggested fix:</b> Run the linter's auto-fix; drop the unused import.</p>
+  </div>
+
+  <div class="summary">
+    <b>Summary:</b> Solid direction and clean structure. Fix the two bug-level
+    findings (refresh rotation and the seconds/milliseconds expiry comparison),
+    tighten the middleware error path, and restore rotation test coverage. Happy to
+    re-review once those are in &mdash; this should be close after that.
+    <div class="sig">2 bugs &middot; 2 warnings &middot; 2 nits &nbsp;|&nbsp; reviewed automatically &middot; 2026-06-07</div>
+  </div>
+
+</div>
+</body>
+</html>
