@@ -123,7 +123,14 @@ export function renderViewerShell(opts: ViewerShellOptions): { html: string; csp
       "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;" +
       "--aurora-1:#43e0d0;--aurora-2:#7af0a3;--aurora-3:#9be8ff;--aurora-warm:#ffd6a8;--aurora-rose:#ff9ec4;" +
       "--ink:#0f2b2a;--ink-soft:#3a5654;--ink-faint:#6d8987;" +
-      "--glass-tint:rgba(255,255,255,0.50);--hairline:rgba(255,255,255,0.85);" +
+      // Surface alpha is high enough that compositing over ANY artifact bg
+      // leaves a light floor (~.68*255 over black), so the dark-teal ink keeps
+      // contrast over dark artifacts; the gradient ring + frost keep it calm.
+      "--glass-tint:rgba(255,255,255,0.68);" +
+      // Adaptive outer hairline: a faint dark ring that DEFINES the pill edge
+      // over pure-white artifacts (where the translucent fill is invisible) and
+      // simply disappears over dark ones (where the light surface defines it).
+      "--edge:rgba(18,52,50,0.13);--hairline:rgba(255,255,255,0.85);" +
       "--u:4px;--radius:16px;--ease:cubic-bezier(.22,.61,.18,1);" +
       "display:flex;flex-direction:column;align-items:flex-end;max-width:calc(100vw - 24px);}" +
 
@@ -131,7 +138,9 @@ export function renderViewerShell(opts: ViewerShellOptions): { html: string; csp
     ".pc-root .glass{position:relative;background:var(--glass-tint);" +
       "-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);" +
       "border:1px solid transparent;border-radius:var(--radius);" +
-      "box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 12px 28px -16px rgba(20,60,58,.40),0 1px 4px -1px rgba(20,60,58,.18);}" +
+      // outer adaptive hairline (--edge) + inner top highlight + a slightly
+      // deeper drop so the surface always reads as a floating card, even on white
+      "box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset,0 14px 30px -16px rgba(20,60,58,.50),0 2px 6px -2px rgba(20,60,58,.30);}" +
     ".pc-root .glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;" +
       "background:linear-gradient(135deg,rgba(255,255,255,.95) 0%,rgba(155,232,255,.55) 35%,rgba(67,224,208,.45) 60%,rgba(255,255,255,.92) 100%);" +
       "-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;" +
