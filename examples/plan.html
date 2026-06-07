@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan — offline draft sync</title>
+<style>
+  :root {
+    --ink: #0f2b2a;
+    --teal: #0c7a73;
+    --aurora: #43e0d0;
+    --meta: #6d8987;
+    --bg: #f7faf9;
+    --card: #ffffff;
+    --line: #e2ecea;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.62;
+    font-size: 17px;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 64px 28px 96px;
+  }
+  header { margin-bottom: 48px; }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .eyebrow svg { display: block; }
+  h1 {
+    font-size: 33px;
+    line-height: 1.18;
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    font-weight: 680;
+  }
+  .meta {
+    color: var(--meta);
+    font-size: 14px;
+    margin: 0;
+  }
+  .meta .dot { opacity: 0.5; padding: 0 6px; }
+  .intent {
+    margin: 28px 0 0;
+    font-size: 18px;
+    color: #234644;
+    border-left: 3px solid var(--aurora);
+    padding: 4px 0 4px 20px;
+  }
+  h2 {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 56px 0 4px;
+    font-weight: 650;
+  }
+  .phase-title {
+    font-size: 21px;
+    margin: 4px 0 16px;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+  }
+  ol.steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  ol.steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 6px 0 6px 38px;
+    border-bottom: 1px solid var(--line);
+  }
+  ol.steps li:last-child { border-bottom: none; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e6f5f3;
+    color: var(--teal);
+    font-size: 12.5px;
+    font-weight: 650;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  ol.steps li b { font-weight: 600; }
+  .files {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px 18px;
+    margin-top: 16px;
+  }
+  .files .row {
+    display: flex;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .files .row:last-child { border-bottom: none; }
+  code, .path {
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 14px;
+  }
+  .path {
+    color: var(--ink);
+    background: #eef6f5;
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .files .note { color: var(--meta); font-size: 14.5px; }
+  ul.questions {
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  ul.questions li {
+    position: relative;
+    padding: 7px 0 7px 26px;
+    color: #2c504e;
+  }
+  ul.questions li::before {
+    content: "?";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    color: var(--teal);
+    font-weight: 700;
+  }
+  footer {
+    margin-top: 64px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    color: var(--meta);
+    font-size: 13px;
+  }
+  @media (max-width: 540px) {
+    .wrap { padding: 40px 20px 72px; }
+    h1 { font-size: 27px; }
+    .files .row { flex-direction: column; gap: 4px; }
+    .path { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="eyebrow">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M2 7l3.5 3.5L12 4" stroke="#0c7a73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Implementation plan
+      </span>
+      <h1>Add offline draft sync to the notes app</h1>
+      <p class="meta">
+        status: draft <span class="dot">·</span> est. ~2 days <span class="dot">·</span> owner: notes-core
+      </p>
+      <p class="intent">
+        Let people keep writing when the network drops. We will persist draft edits locally, queue
+        unsynced changes, and reconcile them with the server on reconnect — so a note is never lost
+        and the editor never blocks on a request. The goal is a sync layer that is invisible when it
+        works and honest when it conflicts.
+      </p>
+    </header>
+
+    <section>
+      <h2>Phase 1 — Local persistence</h2>
+      <div class="phase-title">Make every keystroke durable on-device</div>
+      <ol class="steps">
+        <li>Add an IndexedDB store, <code>drafts</code>, keyed by note id with a <b>version</b> and <b>updatedAt</b> field.</li>
+        <li>Wrap writes in a debounced (400ms) <code>saveDraft()</code> so typing never triggers a write storm.</li>
+        <li>On editor mount, hydrate from the local draft before fetching the server copy.</li>
+        <li>Migrate any drafts currently held in <code>localStorage</code> on first launch, then clear the old keys.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Phase 2 — Sync queue</h2>
+      <div class="phase-title">Track what hasn't reached the server yet</div>
+      <ol class="steps">
+        <li>Introduce an outbox: an ordered queue of pending mutations with a stable client id.</li>
+        <li>Flush the queue on a successful network ping and on the browser <code>online</code> event.</li>
+        <li>Use exponential backoff for failed flushes; cap retries and surface a quiet "saving…" state.</li>
+        <li>Mark each note with a sync badge — <b>synced</b>, <b>pending</b>, or <b>offline</b> — in the list view.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Phase 3 — Conflict reconciliation</h2>
+      <div class="phase-title">Decide fairly when both sides changed</div>
+      <ol class="steps">
+        <li>Compare server <code>version</code> against the draft's base version on flush.</li>
+        <li>If they match, fast-forward; if not, run a three-way merge on the text body.</li>
+        <li>When the merge is ambiguous, keep both versions and prompt the user to choose — never silently overwrite.</li>
+        <li>Log every conflict resolution to telemetry so we can tune the merge heuristics later.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Phase 4 — Polish &amp; rollout</h2>
+      <div class="phase-title">Ship it behind a flag, watch, widen</div>
+      <ol class="steps">
+        <li>Gate the whole flow behind the <code>offline_drafts</code> feature flag.</li>
+        <li>Add an integration test that toggles the network mid-edit and asserts no data loss.</li>
+        <li>Roll out to 10% of accounts, watch conflict and flush-failure rates for a week.</li>
+        <li>Remove the flag and the legacy autosave path once metrics hold steady.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Key changes — files to touch</h2>
+      <div class="files">
+        <div class="row"><span class="path">src/sync/draftStore.ts</span><span class="note">new — IndexedDB wrapper &amp; migration</span></div>
+        <div class="row"><span class="path">src/sync/outbox.ts</span><span class="note">new — pending mutation queue &amp; flush</span></div>
+        <div class="row"><span class="path">src/editor/useDraft.ts</span><span class="note">hydrate, debounce, persist</span></div>
+        <div class="row"><span class="path">src/sync/merge.ts</span><span class="note">three-way text reconciliation</span></div>
+        <div class="row"><span class="path">src/notes/NoteListItem.tsx</span><span class="note">sync status badge</span></div>
+        <div class="row"><span class="path">config/flags.ts</span><span class="note">add offline_drafts gate</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Open questions</h2>
+      <ul class="questions">
+        <li>What is the storage budget per device before we start pruning old synced drafts?</li>
+        <li>Do shared/collaborative notes need the same path, or should they stay server-authoritative for now?</li>
+        <li>Should the conflict prompt block the editor, or resolve quietly in a side panel?</li>
+      </ul>
+    </section>
+
+    <footer>
+      Living document — revise as phases land. Last touched by the planning agent.
+    </footer>
+  </div>
+</body>
+</html>

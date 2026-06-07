@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurora — interface exploration</title>
+<style>
+  :root {
+    --teal:#43e0d0; --green:#7af0a3; --sky:#9be8ff; --warm:#ffd6a8; --rose:#ff9ec4;
+    --ink:#0f2b2a; --soft:#3a5654; --faint:#6d8987;
+    --bg:#f6faf9; --card:#ffffff; --line:#e4eeed;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --r:14px;
+    --shadow:0 1px 2px rgba(15,43,42,.04),0 8px 24px rgba(15,43,42,.06);
+  }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    margin:0; font-family:var(--sans); color:var(--ink); line-height:1.5;
+    background:
+      radial-gradient(1200px 520px at 12% -8%, rgba(67,224,208,.16), transparent 60%),
+      radial-gradient(1000px 480px at 96% -2%, rgba(155,232,255,.14), transparent 55%),
+      radial-gradient(900px 600px at 80% 110%, rgba(255,158,196,.10), transparent 55%),
+      var(--bg);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:880px; margin:0 auto; padding:48px 24px 72px; }
+  header { margin-bottom:44px; }
+  .eyebrow {
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--soft); font-weight:600; margin-bottom:18px;
+  }
+  .eyebrow .dot {
+    width:16px; height:16px; border-radius:5px;
+    background:linear-gradient(135deg,var(--teal),var(--sky) 55%,var(--rose));
+    box-shadow:0 2px 8px rgba(67,224,208,.45);
+  }
+  h1 { font-size:clamp(30px,6vw,46px); line-height:1.05; margin:0 0 12px; letter-spacing:-.02em; font-weight:680; }
+  .lede { font-size:clamp(16px,2.4vw,19px); color:var(--soft); max-width:54ch; margin:0; }
+
+  section { margin-top:40px; }
+  .sec-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+  h2 { font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); margin:0; font-weight:600; }
+  .note { font-size:13.5px; color:var(--faint); margin:0; max-width:46ch; }
+
+  /* palette */
+  .palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; }
+  .swatch {
+    border-radius:var(--r); overflow:hidden; background:var(--card);
+    border:1px solid var(--line); box-shadow:var(--shadow);
+  }
+  .chip { height:74px; }
+  .swatch .meta { padding:11px 13px; }
+  .swatch .name { font-size:13px; font-weight:600; }
+  .swatch .hex { font-family:var(--mono); font-size:12px; color:var(--faint); margin-top:2px; }
+
+  /* type scale */
+  .typecard { background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:6px 22px; }
+  .type-row { display:flex; align-items:baseline; gap:18px; padding:15px 0; border-bottom:1px solid var(--line); }
+  .type-row:last-child { border-bottom:0; }
+  .type-row .label { font-family:var(--mono); font-size:11.5px; color:var(--faint); width:108px; flex:none; }
+  .type-row .specimen { letter-spacing:-.01em; color:var(--ink); }
+  .t-display { font-size:38px; font-weight:680; line-height:1; }
+  .t-title { font-size:24px; font-weight:640; }
+  .t-body { font-size:16px; font-weight:400; }
+  .t-caption { font-size:13px; font-weight:500; color:var(--soft); }
+
+  /* buttons */
+  .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  .btn {
+    font-family:inherit; font-size:14.5px; font-weight:600; cursor:pointer;
+    padding:11px 20px; border-radius:11px; border:1px solid transparent;
+    transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:active { transform:translateY(1px); }
+  .btn-primary {
+    color:var(--ink); border:0;
+    background:linear-gradient(135deg,var(--teal),var(--green) 90%);
+    box-shadow:0 6px 16px rgba(67,224,208,.4);
+  }
+  .btn-primary:hover { box-shadow:0 8px 22px rgba(67,224,208,.5); }
+  .btn-secondary { background:var(--card); color:var(--ink); border:1px solid var(--line); box-shadow:var(--shadow); }
+  .btn-secondary:hover { border-color:var(--teal); }
+  .btn-ghost { background:transparent; color:var(--soft); border:1px solid transparent; }
+  .btn-ghost:hover { background:rgba(15,43,42,.04); color:var(--ink); }
+  .btn-soft { background:rgba(155,232,255,.28); color:var(--ink); border:1px solid rgba(155,232,255,.5); }
+  .btn-soft:hover { background:rgba(155,232,255,.42); }
+  .btn[disabled] { opacity:.45; cursor:not-allowed; }
+  .pill {
+    font-size:12px; font-weight:600; padding:5px 12px; border-radius:999px;
+    background:rgba(122,240,163,.22); color:var(--soft); border:1px solid rgba(122,240,163,.45);
+  }
+
+  /* cards */
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr)); gap:16px; }
+  .card {
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+    box-shadow:var(--shadow); padding:20px; position:relative; overflow:hidden;
+  }
+  .card::before {
+    content:""; position:absolute; inset:0 0 auto 0; height:3px;
+    background:linear-gradient(90deg,var(--teal),var(--sky),var(--rose));
+  }
+  .card .k { font-family:var(--mono); font-size:11.5px; color:var(--faint); letter-spacing:.04em; }
+  .card h3 { font-size:18px; margin:8px 0 6px; font-weight:640; letter-spacing:-.01em; }
+  .card p { font-size:14px; color:var(--soft); margin:0 0 16px; }
+  .stat { display:flex; align-items:baseline; gap:8px; }
+  .stat .num { font-size:30px; font-weight:680; letter-spacing:-.02em; }
+  .stat .delta { font-size:13px; font-weight:600; color:#1f9e6b; }
+  .meter { height:8px; border-radius:999px; background:var(--line); margin-top:14px; overflow:hidden; }
+  .meter > span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--teal),var(--green)); }
+  .avatars { display:flex; margin-top:14px; }
+  .avatars i {
+    width:30px; height:30px; border-radius:50%; border:2px solid var(--card); margin-left:-8px;
+    display:inline-block; font-style:normal;
+  }
+  .avatars i:first-child { margin-left:0; }
+
+  footer { margin-top:52px; padding-top:20px; border-top:1px solid var(--line); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  footer span { font-size:12.5px; color:var(--faint); }
+  footer code { font-family:var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow"><span class="dot"></span>Aurora design system · v0.3</span>
+    <h1>Aurora — interface exploration</h1>
+    <p class="lede">A calm, light-first language built on soft luminous accents — restrained surfaces, generous space, and color used as a quiet signal rather than decoration.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>Color palette</h2>
+      <p class="note">Five aurora accents over a near-white field; ink tones carry hierarchy.</p>
+    </div>
+    <div class="palette">
+      <div class="swatch"><div class="chip" style="background:#43e0d0"></div><div class="meta"><div class="name">Teal</div><div class="hex">#43e0d0</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#7af0a3"></div><div class="meta"><div class="name">Green</div><div class="hex">#7af0a3</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#9be8ff"></div><div class="meta"><div class="name">Sky</div><div class="hex">#9be8ff</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#ffd6a8"></div><div class="meta"><div class="name">Warm</div><div class="hex">#ffd6a8</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#ff9ec4"></div><div class="meta"><div class="name">Rose</div><div class="hex">#ff9ec4</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0f2b2a"></div><div class="meta"><div class="name">Ink</div><div class="hex">#0f2b2a</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#3a5654"></div><div class="meta"><div class="name">Soft ink</div><div class="hex">#3a5654</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#6d8987"></div><div class="meta"><div class="name">Faint ink</div><div class="hex">#6d8987</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Type scale</h2>
+      <p class="note">One system font, four roles. Tight tracking on large sizes; comfortable body.</p>
+    </div>
+    <div class="typecard">
+      <div class="type-row"><span class="label">Display / 38</span><span class="specimen t-display">Northern light</span></div>
+      <div class="type-row"><span class="label">Title / 24</span><span class="specimen t-title">Section heading</span></div>
+      <div class="type-row"><span class="label">Body / 16</span><span class="specimen t-body">Readable paragraph text for everyday interface copy.</span></div>
+      <div class="type-row"><span class="label">Caption / 13</span><span class="specimen t-caption">Metadata, labels, and quiet supporting detail.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Controls</h2>
+      <p class="note">One emphasis per view. Primary glows; the rest stay neutral and recede.</p>
+    </div>
+    <div class="controls">
+      <button class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Continue
+      </button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-soft">Soft tint</button>
+      <button class="btn btn-ghost">Ghost</button>
+      <button class="btn btn-secondary" disabled>Disabled</button>
+      <span class="pill">● Active</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Components</h2>
+      <p class="note">Cards share a hairline border, soft shadow, and a single aurora seam on top.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="k">WEEKLY ACTIVE</div>
+        <h3>Engagement</h3>
+        <p>Sessions trending up across the cohort this period.</p>
+        <div class="stat"><span class="num">12,480</span><span class="delta">▲ 8.2%</span></div>
+        <div class="meter"><span style="width:72%"></span></div>
+      </div>
+      <div class="card">
+        <div class="k">PROJECT · AURORA</div>
+        <h3>Shipping the palette</h3>
+        <p>Three reviewers signed off. Ready to merge into the token set.</p>
+        <div class="avatars">
+          <i style="background:linear-gradient(135deg,#43e0d0,#9be8ff)"></i>
+          <i style="background:linear-gradient(135deg,#7af0a3,#43e0d0)"></i>
+          <i style="background:linear-gradient(135deg,#ffd6a8,#ff9ec4)"></i>
+          <i style="background:linear-gradient(135deg,#9be8ff,#ff9ec4)"></i>
+        </div>
+        <div style="margin-top:16px"><button class="btn btn-primary" style="padding:9px 16px;font-size:13.5px">Review &amp; merge</button></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Aurora interface exploration — light theme</span>
+    <span><code>self-contained · no external resources</code></span>
+  </footer>
+
+</div>
+</body>
+</html>
