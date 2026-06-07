@@ -6,6 +6,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 import {
+  ApiError,
   artifactHistory,
   keepArtifact,
   listSpace,
@@ -46,39 +47,18 @@ function fmtTime(ms: number | null | undefined): string {
   return new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
 }
 
-/** Format an epoch-ms expiry as an absolute time plus a relative hint. */
-function fmtExpiry(ms: number | null | undefined): string {
-  if (ms == null) return "";
-  const days = Math.round((ms - Date.now()) / 86400000);
-  const rel = days <= 0 ? "soon" : days === 1 ? "in ~1 day" : `in ~${days} days`;
-  return `${fmtTime(ms)} (${rel})`;
-}
-
-/** Compose the standard human-readable success message every tool returns. */
-function publishMessage(
-  what: string,
-  res: {
-    url: string;
-    spaceUrl: string;
-    markdown: string;
-    version: number;
-    expiresAt: number | null;
-  }
-): string {
-  const lines: string[] = [];
-  lines.push(`Published ${what} (v${res.version}).`);
-  // Always surface a tappable markdown link.
-  lines.push("");
-  lines.push(res.markdown);
-  lines.push("");
-  lines.push(`Live space (updates in real time): ${res.spaceUrl}`);
-  lines.push(`Direct URL: ${res.url}`);
-  if (res.expiresAt) {
-    lines.push(`Expires ${fmtExpiry(res.expiresAt)} — use \`keep\` to make it permanent.`);
-  } else {
-    lines.push("This artifact has no expiry.");
-  }
-  return lines.join("\n");
+/**
+ * Compose the success message a publish tool returns. Deliberately terse: hand
+ * the agent the tappable link plus a one-line directive to share it plainly.
+ * No space/version/expiry chatter — that ceremony is what makes replies noisy.
+ */
+function publishMessage(what: string, res: { markdown: string }): string {
+  return (
+    `Published ${what}.\n\n` +
+    `${res.markdown}\n\n` +
+    `Share that link with the user in one short line. No emoji, no private/public ` +
+    `labels, no expiry notes — just the link.`
+  );
 }
 
 async function main(): Promise<void> {
@@ -101,21 +81,19 @@ async function main(): Promise<void> {
   );
 
   const server = new McpServer(
-    { name: "protocontent", version: "0.2.2" },
+    { name: "protocontent", version: "0.3.0" },
     {
       instructions:
-        "Publish local files/folders to protocontent and share a tappable, live URL. Each agent " +
-        "thread is one persistent 'space'; everything you publish lands there and the space page " +
-        "updates in real time as you republish.\n\n" +
-        "WHEN TO PUBLISH: any self-contained artifact a human would want to open in a browser — " +
-        "HTML reports, plans, dashboards, prototypes, generated docs, diagrams, screenshots, or a " +
-        "built static site. Do NOT publish repo source code, secrets, or files meant to be committed.\n\n" +
-        "ALWAYS, on every publish: show the returned markdown link to the user. To UPDATE an artifact " +
-        "as you iterate, call publish_html/publish_folder again with the SAME `name` — it republishes " +
-        "in place at the same URL (do not invent a new name like plan-v2). Use `keep` to stop expiry.\n\n" +
-        "AT THE END of a turn where you published anything: surface BOTH (1) the private session-index " +
-        "link (the space page, carrying its ?k= token — the one link that shows everything) and (2) each " +
-        "worked-on artifact's direct link. The `list` tool returns both. Label which is private vs public.",
+        "Publish a local file or folder to protocontent and share its live link. Everything you " +
+        "publish lands in this thread's persistent 'space' and updates in place when you republish " +
+        "under the same name.\n\n" +
+        "WHEN TO PUBLISH: any self-contained, browser-openable artifact — HTML reports, plans, " +
+        "dashboards, prototypes, diagrams, screenshots, or a built static site. Never publish source " +
+        "code, secrets, or files meant to be committed.\n\n" +
+        "AFTER PUBLISHING: share the returned markdown link in ONE short line — no preamble, no " +
+        "emoji, no 'private vs public' explanation, no expiry notes. To update an artifact, publish " +
+        "again with the SAME `name` (same URL). The `list` tool returns the space index link that " +
+        "shows everything; surface it only when the user asks to see the whole collection.",
     }
   );
 
@@ -125,11 +103,10 @@ async function main(): Promise<void> {
     {
       title: "Publish a single file",
       description:
-        "Publish a single HTML (or other) file or inline content to this space and SHARE its " +
-        "tappable, live URL with the user. Provide exactly one of `path` (a file on disk) or " +
-        "`content` (inline text; `html`/`body` accepted as aliases). To UPDATE an artifact as you " +
-        "iterate, call again with the SAME `name` — it republishes in place at the same URL (don't " +
-        "invent a new name). The space page updates live as you republish.",
+        "Publish a single HTML (or other) file or inline content to this space and share its live " +
+        "link. Provide exactly one of `path` (a file on disk) or `content` (inline text; `html`/" +
+        "`body` accepted as aliases). To update an artifact, call again with the SAME `name` — it " +
+        "republishes in place at the same URL (don't invent a new name like plan-v2).",
       inputSchema: {
         path: z
           .string()
@@ -244,10 +221,9 @@ async function main(): Promise<void> {
     {
       title: "Publish a folder",
       description:
-        "Recursively publish a local directory (e.g. a built static site) to this space and SHARE " +
-        "its tappable, live URL with the user. To UPDATE it, call again with the SAME `name` — it " +
-        "republishes in place at the same URL. Skips node_modules, .git, and dotfiles. The space " +
-        "page updates live as you republish.",
+        "Recursively publish a local directory (e.g. a built static site) to this space and share " +
+        "its live link. To update it, call again with the SAME `name` — it republishes in place at " +
+        "the same URL. Skips node_modules, .git, dist, and dotfiles.",
       inputSchema: {
         dir: z.string().describe("Path to the directory to publish."),
         entry: z
@@ -346,9 +322,9 @@ async function main(): Promise<void> {
     {
       title: "List artifacts in this space",
       description:
-        "List every artifact in this space with its live URL and version, plus the private " +
-        "session-index link. Use this at the END of a task to surface BOTH the index link (private, " +
-        "?k=) and each worked-on artifact's direct link (public) to the user.",
+        "List the artifacts in this space with their live links, plus the space index link that " +
+        "shows everything. Use it to recover an artifact's link, or to give the user the index page " +
+        "when they ask to see the whole collection.",
       inputSchema: {},
     },
     async () => {
@@ -356,21 +332,17 @@ async function main(): Promise<void> {
         const res = await listSpace(config);
         const spaceUrl = res.spaceUrl || `https://${config.spaceId}.protocontent.app`;
         if (!res.artifacts || res.artifacts.length === 0) {
-          return textResult(
-            `No artifacts published yet in space ${config.spaceId}.\n` +
-              `Space: ${spaceUrl}`
-          );
+          return textResult("Nothing published in this space yet.");
         }
-        const lines = res.artifacts.map((a) => {
-          const exp = a.expiresAt ? ` — expires ${fmtExpiry(a.expiresAt)}` : " — no expiry";
-          return `- [${a.name} ↗](${a.url}) (v${a.version})${exp}`;
-        });
+        const lines = res.artifacts.map((a) => `- [${a.name} ↗](${a.url})`);
         return textResult(
-          `Artifacts in space ${config.spaceId}:\n` +
-            lines.join("\n") +
-            `\n\nLive space (updates in real time): ${spaceUrl}`
+          lines.join("\n") + `\n\nSpace index (shows everything): ${spaceUrl}`
         );
       } catch (err) {
+        // A space that has never been published to 404s — that's "empty", not an error.
+        if (err instanceof ApiError && err.status === 404) {
+          return textResult("Nothing published in this space yet.");
+        }
         return errorResult(`List failed: ${(err as Error).message}`);
       }
     }

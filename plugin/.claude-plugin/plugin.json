@@ -1,7 +1,7 @@
 {
   "name": "protocontent",
   "description": "Publish browser-openable artifacts to protocontent and share live, updating links — automatically.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "Jaron Heard" },
   "homepage": "https://github.com/jaronheard/protocontent",
   "repository": "https://github.com/jaronheard/protocontent",

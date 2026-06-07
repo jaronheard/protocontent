@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 # protocontent Stop hook.
 #
-# If the agent published to protocontent during this turn but its final message
-# contains no protocontent link, nudge ONCE to surface the links. Otherwise stay
-# out of the way. Fail-open and conservative: any uncertainty allows the stop.
-# Disable entirely with PROTOCONTENT_DISABLE_STOP_HOOK=1.
+# Narrow safety net: if the agent published to protocontent DURING THIS TURN but
+# its final message shares no protocontent link, nudge ONCE to paste the link.
+# Otherwise stay completely out of the way.
 #
-# Block protocol: print {"decision":"block","reason":...} to stdout and exit 0.
-# Allow: exit 0 with no output. We never exit non-zero (stay quiet on errors).
+# Two earlier failure modes this version fixes:
+#   1. It matched the substring "publish" anywhere in the transcript tail, so
+#      merely editing code that contains the word "publish" tripped it. We now
+#      match the structured tool_use NAME (mcp__protocontent__publish_html/folder).
+#   2. It scanned a fixed 400-line window, so a publish from a PREVIOUS turn kept
+#      re-triggering the nag. We now scope strictly to the CURRENT turn (messages
+#      after the last genuine user prompt) and fail open if the boundary is
+#      unclear.
+#
+# Block protocol: print {"decision":"block","reason":...} to stdout, exit 0.
+# Allow: exit 0 with no output. Never exit non-zero (stay quiet on any error).
+# Disable entirely with PROTOCONTENT_DISABLE_STOP_HOOK=1.
 
 input="$(cat)"
 allow() { exit 0; }
@@ -22,14 +31,36 @@ active="$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)
 transcript="$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)"
 { [ -n "$transcript" ] && [ -f "$transcript" ]; } || allow
 
-tailbuf="$(tail -n 400 "$transcript" 2>/dev/null)" || allow
+# Decide on the CURRENT turn only. A turn = the transcript entries after the last
+# genuine user prompt (a `user` line that is neither a tool_result nor a
+# system/meta reminder). If we can't locate that boundary in the tail, fail open.
+verdict="$(tail -n 800 "$transcript" 2>/dev/null | jq -rs '
+  def genuine:
+    .type == "user"
+    and (.isMeta != true)
+    and ((.message.content // null) as $c
+         | if   ($c | type) == "string" then ($c | length) > 0
+           elif ($c | type) == "array"  then (any($c[]?; .type == "tool_result") | not)
+           else false end);
+  def publishCall: .type == "assistant"
+    and ((.message.content // []) | type == "array")
+    and (any(.message.content[]?;
+             .type == "tool_use"
+             and ((.name // "") | test("mcp__protocontent__publish_(html|folder)"))));
+  to_entries as $e
+  | ($e | map(select(.value | genuine)) | last | .key) as $u
+  | if $u == null then "ok"
+    else
+      [ $e[range($u + 1; ($e | length))].value ] as $turn
+      | ($turn | any(publishCall)) as $pub
+      | ([ $turn[] | select(.type == "assistant") ] | last // {}
+         | (.message.content // [])
+         | if type == "array" then ([ .[]? | select(.type == "text") | .text ] | join("\n")) else "" end
+        ) as $txt
+      | if ($pub and (($txt | test("protocontent\\.(app|com)")) | not)) then "nudge" else "ok" end
+    end
+' 2>/dev/null)" || allow
 
-# Only act if a protocontent publish tool was actually used recently.
-printf '%s' "$tailbuf" | grep -qE 'mcp__protocontent__publish_(html|folder)' || allow
+[ "$verdict" = "nudge" ] || allow
 
-# If the latest assistant message already shares a protocontent link, all good.
-last_text="$(printf '%s' "$tailbuf" | jq -rs 'map(select(.type=="assistant")) | last // {} | (.message.content // []) | if type=="array" then (map(select(.type=="text").text) | join("\n")) else "" end' 2>/dev/null)"
-printf '%s' "$last_text" | grep -qiE 'protocontent\.(app|com)' && allow
-
-# Published but no link shared -> nudge once.
-jq -n '{decision:"block", reason:"You published to protocontent this turn, but your final message has no protocontent link. Run the `list` tool, then share BOTH the private session-index link (the ?k= URL that shows everything) and each worked-on artifact'"'"'s direct link before finishing."}'
+jq -n '{decision:"block", reason:"You published to protocontent this turn but did not share its link. Paste the markdown link from the publish result into your reply — one short line, nothing else."}'

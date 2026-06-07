@@ -5,43 +5,39 @@ description: >-
   Use whenever you create or update a self-contained, browser-openable artifact —
   an HTML report, plan, dashboard, prototype, diagram, generated doc, screenshot,
   or built static site — or when the user asks to share/publish/send a link to
-  something you made. Also use at the end of a task to surface all published links.
+  something you made.
 ---
 
 # Publishing artifacts with protocontent
 
-protocontent turns a local file or folder into a tappable, live-updating URL.
-Each agent thread is one persistent "space"; everything you publish lands there
-and the space page updates in real time as you republish.
+protocontent turns a local file or folder into a live, shareable URL. Everything
+you publish lands in this thread's persistent "space" and updates in place when
+you republish — the space and its links stay stable for the life of the project.
 
-## When to publish (and when not to)
+## When to publish
 
 **Publish:** HTML reports / plans / specs, dashboards, prototypes, generated
 docs, charts/diagrams, screenshots, a built static site (a folder).
 
-**Do NOT publish:** repo source code, anything meant to be committed, secrets,
-or large binaries. When unsure, publish a *rendered report* view, not raw code.
+**Don't publish:** repo source code, anything meant to be committed, secrets, or
+large binaries. When unsure, publish a *rendered report* view, not raw code.
 
-## The workflow (every time)
+## How
 
-1. **Publish** via `protocontent:publish_html` (a single file or inline content)
-   or `protocontent:publish_folder` (a directory). Pick a stable, descriptive
+1. **Publish** with `protocontent:publish_html` (a file or inline content) or
+   `protocontent:publish_folder` (a directory). Pick a stable, descriptive
    `name` (e.g. `auth-redesign-plan`).
-2. **Share immediately:** put the returned markdown link in your reply to the user.
-3. **Iterate = update in place:** when you revise, publish again with the SAME
-   `name` — same URL, live update. Never mint `plan-v2` / `plan-final`. Use
-   `keep` to persist an artifact past its default expiry.
+2. **Share the link in one short line.** Example: `Published the auth plan →
+   [auth-redesign-plan ↗](https://…/auth-redesign-plan)`. That's it — no emoji,
+   no "private vs public" explanation, no expiry notes, no follow-up offers.
+3. **Update in place:** to revise, publish again with the SAME `name` — same URL,
+   live update. Never mint `plan-v2` / `plan-final`.
 
-## End-of-task summary (always BOTH kinds of link)
+## Keep it quiet
 
-When you've published anything, end your turn with a **Published** section,
-sourced from `protocontent:list`:
-
-```
-**Published**
-- Session index (private, shows everything): <space ?k= link>
-- <artifact-name>: <direct public link>
-```
-
-The session-index link is **private** (token-gated, `?k=`); the per-artifact
-links are **public**. Label which is which so the user shares deliberately.
+- Don't narrate whether or not you published, and don't re-list links on later
+  turns unless the user asks.
+- The **space index link** (from `list`) shows everything in the space. Surface
+  it only when the user asks to see the whole collection.
+- Artifacts expire after a few days by default; `keep` removes the expiry.
+  Mention expiry only if the user brings it up.
