@@ -1,0 +1,49 @@
+name: deploy
+
+# Continuously deploy the protocontent Worker to Cloudflare.
+# Runs on every push to main that touches the worker, and on demand.
+#
+# Requires two repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — scoped token, "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  — 703170b6ffc933d4217804e3ef54cd0e
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "protocontent/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-protocontent
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: protocontent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: protocontent/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: protocontent
+          command: deploy
