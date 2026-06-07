@@ -129,35 +129,102 @@ async function writeSpaces(map: Record<string, string>): Promise<void> {
 const NEW_SPACE_ID = /^[a-z]+-[a-z]+-[a-z2-7]{20,}$/;
 
 /**
+ * Resolve the stable PROJECT ROOT for a directory: the top of its git repo,
+ * shared across all worktrees of that repo, so the space stays the same whether
+ * you run in the main checkout or any worktree.
+ *
+ * Walks up looking for `.git`. A `.git` directory means we found the repo root.
+ * A `.git` *file* means this is a linked worktree — it points at
+ * `<mainRoot>/.git/worktrees/<name>`, so we recover `<mainRoot>` from it.
+ * Returns null if `startDir` is not inside a git repo.
+ */
+async function resolveProjectRoot(startDir: string): Promise<string | null> {
+  let dir = path.resolve(startDir);
+  for (let i = 0; i < 40; i++) {
+    const gitPath = path.join(dir, ".git");
+    try {
+      const stat = await fs.stat(gitPath);
+      if (stat.isDirectory()) return dir;
+      if (stat.isFile()) {
+        // Linked worktree: ".git" is a file like "gitdir: /abs/.git/worktrees/x".
+        try {
+          const content = await fs.readFile(gitPath, "utf8");
+          const m = content.match(/gitdir:\s*(.+)\s*$/m);
+          if (m) {
+            let gd = m[1].trim();
+            if (!path.isAbsolute(gd)) gd = path.resolve(dir, gd);
+            const marker = `${path.sep}.git${path.sep}worktrees${path.sep}`;
+            const idx = gd.indexOf(marker);
+            if (idx >= 0) return gd.slice(0, idx); // the main repo root
+          }
+        } catch {
+          // fall through to using this dir
+        }
+        return dir;
+      }
+    } catch {
+      // no .git here — keep walking up
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/**
  * Compute the space id + label for this run.
  *
  * The space id is HIGH-ENTROPY RANDOM (~110 bits) — it's the capability that
- * grants access to a space, so it must be unguessable and is NOT derived from
- * anything public like the agent session id. For stability across bridge
- * restarts within the SAME agent thread, the random id is cached keyed by
- * CLAUDE_SESSION_ID in ~/.protocontent/spaces.json. Without a session id, each
- * process gets a fresh random space.
+ * grants access to a space, so it must be unguessable and is NEVER derived from
+ * anything public.
+ *
+ * It is cached so the SAME space is reused across bridge restarts, subagents,
+ * compaction, and resumed/renamed sessions — anything that would otherwise mint
+ * a fresh slug and orphan the links already shared. The cache key, in priority
+ * order:
+ *   1. PROTOCONTENT_SPACE_ID — explicit pin (advanced; used verbatim).
+ *   2. The git PROJECT ROOT (stable across worktrees of one repo).
+ *   3. CLAUDE_PROJECT_DIR, else the current working directory.
+ * The chosen id is persisted under that key in ~/.protocontent/spaces.json and a
+ * valid cached id is never silently regenerated. (Legacy entries keyed by
+ * CLAUDE_SESSION_ID are still honored and migrated to the project key.)
  */
 export async function computeSpace(): Promise<{ spaceId: string; spaceLabel?: string }> {
-  const sessionKey = process.env.CLAUDE_SESSION_ID?.trim();
+  // 1. Explicit pin wins outright.
+  const pinned = process.env.PROTOCONTENT_SPACE_ID?.trim();
+
+  // 2/3. Resolve a stable project key.
+  const startDir = process.env.CLAUDE_PROJECT_DIR?.trim() || process.cwd();
+  const projectRoot = await resolveProjectRoot(startDir);
+  const projectKey = projectRoot || startDir;
+
   let spaceId: string;
-  if (sessionKey && sessionKey.length > 0) {
+  if (pinned && pinned.length > 0) {
+    spaceId = slugify(pinned, "");
+    if (!spaceId) spaceId = generateSpaceId();
+  } else {
     const map = await readSpaces();
-    const cached = map[sessionKey];
-    if (cached && NEW_SPACE_ID.test(cached)) {
-      spaceId = cached;
+    const sessionKey = process.env.CLAUDE_SESSION_ID?.trim();
+    const fromProject = map[projectKey];
+    const fromSession = sessionKey ? map[sessionKey] : undefined;
+    if (fromProject && NEW_SPACE_ID.test(fromProject)) {
+      spaceId = fromProject;
+    } else if (fromSession && NEW_SPACE_ID.test(fromSession)) {
+      // Migrate a legacy session-keyed space onto the durable project key.
+      spaceId = fromSession;
+      map[projectKey] = spaceId;
+      await writeSpaces(map);
     } else {
       spaceId = generateSpaceId();
-      map[sessionKey] = spaceId;
+      map[projectKey] = spaceId;
       await writeSpaces(map);
     }
-  } else {
-    spaceId = generateSpaceId();
   }
 
   let spaceLabel: string | undefined;
   try {
-    const label = slugify(path.basename(process.cwd()), "");
+    const label = slugify(path.basename(projectKey), "");
     spaceLabel = label.length > 0 ? label : undefined;
   } catch {
     spaceLabel = undefined;

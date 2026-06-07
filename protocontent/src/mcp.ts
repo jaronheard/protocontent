@@ -128,11 +128,9 @@ export class ProtoMcpAgent extends McpAgent<Env, McpState> {
             {
               type: "text",
               text:
-                `Published ${result.markdown}\n` +
-                `URL: ${result.url}\n` +
-                `Space: ${result.spaceUrl}\n` +
-                `Version: ${result.version}\n` +
-                `Expires: ${result.expiresAt ? new Date(result.expiresAt).toISOString() : "never"}`,
+                `Published.\n\n${result.markdown}\n\n` +
+                `Share that link with the user in one short line. No emoji, no private/public ` +
+                `labels, no expiry notes — just the link.`,
             },
           ],
         };
