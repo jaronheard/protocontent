@@ -60,17 +60,42 @@ Tiebreak: lead with the mechanism-first take, because this is a developer
 infrastructure primitive and clarity is the conversion lever for a skeptical
 senior developer. The emotional take becomes the A/B challenger.
 
+The panel then ran a second iteration to pull exact language from the source
+material (the "Unreasonable Effectiveness of HTML" blog and protocontent's own
+foundation/spec HTML), change the install line to "add protocontent to your
+coding agent," and enumerate the artifacts as working material that lives outside
+source control. All six again kept the H1 and converged on the subhead below.
+
 ### Primary hero
 
 > # Your agent makes a file. You get a link.
 >
-> The missing step after "make me an HTML page." Run `npx protocontent` next to
-> your coding agent and whatever it builds is live at a link — your laptop, your
-> phone, anywhere. No repo, no deploy.
+> The missing step after "make an HTML file." Add protocontent to your coding
+> agent, and whatever it builds — a rendered plan, an HTML prototype, a formatted
+> brief, a mockup, a diagram — is live at a link the instant it's created.
+> Outside version control. Never staged, never committed. Your laptop, your
+> phone, anywhere.
 
-### A/B challenger (emotional)
+Every phrase traces to source: "make an HTML file" and the missing-step framing
+come from the blog; "A rendered plan. An HTML prototype. A formatted brief. A
+mockup. A diagram." and "never staged, never committed" come from protocontent's
+own HTML.
+
+### Subhead variant — names the gap out loud
+
+For a version that quotes the blog's own admission of the leftover chore:
+
+> The missing step after "make an HTML file": "as long as you upload the HTML
+> file, you can share the link easily" — so you do it by hand, every time. Add
+> protocontent to your coding agent, and whatever it builds — a rendered plan, an
+> HTML prototype, a formatted brief, a mockup, a diagram — is live at a link,
+> outside version control, the instant it's created.
+
+### A/B challenger (emotional H1)
 
 > # Your agent made it. Now just look at it.
+
+(Pairs with the same subhead.)
 
 ### Positioning statement
 
