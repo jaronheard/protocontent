@@ -3,9 +3,9 @@ name: publishing-artifacts
 description: >-
   Publish shareable HTML artifacts to protocontent and share their live links.
   Use whenever you create or update a self-contained, browser-openable artifact —
-  an HTML report, plan, dashboard, prototype, diagram, generated doc, screenshot,
-  or built static site — or when the user asks to share/publish/send a link to
-  something you made.
+  an HTML report, a Markdown doc (rendered to a styled page), plan, dashboard,
+  prototype, diagram, generated doc, screenshot, or built static site — or when
+  the user asks to share/publish/send a link to something you made.
 ---
 
 # Publishing artifacts with protocontent
@@ -16,8 +16,9 @@ you republish — the space and its links stay stable for the life of the projec
 
 ## When to publish
 
-**Publish:** HTML reports / plans / specs, dashboards, prototypes, generated
-docs, charts/diagrams, screenshots, a built static site (a folder).
+**Publish:** HTML reports / plans / specs, Markdown docs (`.md`, rendered to a
+styled page), dashboards, prototypes, generated docs, charts/diagrams,
+screenshots, a built static site (a folder).
 
 **Don't publish:** repo source code, anything meant to be committed, secrets, or
 large binaries. When unsure, publish a *rendered report* view, not raw code.

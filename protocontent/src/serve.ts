@@ -18,6 +18,7 @@ import type { Env } from "./types";
 import { getSpace, listArtifacts, artifactUpdatedAt, resolveFile, getArtifact } from "./db";
 import { renderSpacePage, type SpacePageArtifact } from "./space-page";
 import { renderViewerShell } from "./viewer-shell";
+import { isMarkdownContentType, renderMarkdownDocument } from "./markdown";
 import { json } from "./util";
 
 /**
@@ -207,6 +208,22 @@ export async function handleContent(
   headers.set("x-content-type-options", "nosniff");
   headers.set("x-robots-tag", "noindex");
   headers.set("cache-control", "public, max-age=60");
+
+  // Markdown is the one common agent output the browser can't render on its own
+  // (`text/markdown` shows as raw text). Render it to a styled HTML document and
+  // serve THAT under the same sandbox CSP / opaque origin. `?source=1` opts out
+  // and returns the literal Markdown bytes (for copy / view-source).
+  const wantsSource = url.searchParams.get("source") === "1";
+  if (isMarkdownContentType(file.content_type) && !wantsSource) {
+    const html = renderMarkdownDocument(await obj.text(), name);
+    const bytes = new TextEncoder().encode(html);
+    headers.set("content-type", "text/html; charset=utf-8");
+    headers.set("content-length", String(bytes.byteLength));
+    if (request.method === "HEAD") {
+      return new Response(null, { status: 200, headers });
+    }
+    return new Response(bytes, { status: 200, headers });
+  }
 
   if (request.method === "HEAD") {
     return new Response(null, { status: 200, headers });

@@ -87,9 +87,9 @@ async function main(): Promise<void> {
         "Publish a local file or folder to protocontent and share its live link. Everything you " +
         "publish lands in this thread's persistent 'space' and updates in place when you republish " +
         "under the same name.\n\n" +
-        "WHEN TO PUBLISH: any self-contained, browser-openable artifact — HTML reports, plans, " +
-        "dashboards, prototypes, diagrams, screenshots, or a built static site. Never publish source " +
-        "code, secrets, or files meant to be committed.\n\n" +
+        "WHEN TO PUBLISH: any self-contained, browser-openable artifact — HTML reports, Markdown " +
+        "docs (rendered to a styled page), plans, dashboards, prototypes, diagrams, screenshots, or a " +
+        "built static site. Never publish source code, secrets, or files meant to be committed.\n\n" +
         "AFTER PUBLISHING: share the returned markdown link in ONE short line — no preamble, no " +
         "emoji, no 'private vs public' explanation, no expiry notes. To update an artifact, publish " +
         "again with the SAME `name` (same URL). The `list` tool returns the space index link that " +
@@ -103,8 +103,9 @@ async function main(): Promise<void> {
     {
       title: "Publish a single file",
       description:
-        "Publish a single HTML (or other) file or inline content to this space and share its live " +
-        "link. Provide exactly one of `path` (a file on disk) or `content` (inline text; `html`/" +
+        "Publish a single HTML, Markdown (.md, rendered to a styled page), or other file — or inline " +
+        "content — to this space and share its live link. Provide exactly one of `path` (a file on " +
+        "disk) or `content` (inline text; `html`/" +
         "`body` accepted as aliases). To update an artifact, call again with the SAME `name` — it " +
         "republishes in place at the same URL (don't invent a new name like plan-v2).",
       inputSchema: {
