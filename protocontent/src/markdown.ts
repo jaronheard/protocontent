@@ -118,7 +118,10 @@ body{padding:24px 16px 64px;}
 
 /** Render a Markdown source string to a safe HTML fragment (no <html>/<body>). */
 export function renderMarkdown(source: string): string {
-  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  // Strip a leading UTF-8 BOM (common from Windows editors) so the first line
+  // isn't prefixed with U+FEFF — which would otherwise defeat the heading /
+  // list / fence checks. Normalize CRLF/CR to LF as well.
+  const lines = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
   return parseBlocks(lines, 0, lines.length).html;
 }
 
@@ -345,9 +348,15 @@ function renderListItem(itemLines: string[]): string {
  */
 function renderItemBody(itemLines: string[]): string {
   const hasBlank = itemLines.some((l) => l.trim() === "");
-  const hasBlock =
-    itemLines.length > 1 &&
-    itemLines.slice(1).some((l) => l.trim() !== "" && startsNewBlock(itemLines, itemLines.indexOf(l), itemLines.length));
+  // Walk by index — `indexOf` would return the first matching line, mis-testing
+  // (and quadratically re-scanning) any item with repeated line text.
+  let hasBlock = false;
+  for (let idx = 1; idx < itemLines.length; idx++) {
+    if (itemLines[idx].trim() !== "" && startsNewBlock(itemLines, idx, itemLines.length)) {
+      hasBlock = true;
+      break;
+    }
+  }
   if (!hasBlank && !hasBlock) {
     return inline(itemLines.join("\n").trim());
   }
