@@ -60,36 +60,42 @@ Tiebreak: lead with the mechanism-first take, because this is a developer
 infrastructure primitive and clarity is the conversion lever for a skeptical
 senior developer. The emotional take becomes the A/B challenger.
 
-The panel then ran a second iteration to pull exact language from the source
+The panel then ran further iterations: pulling exact language from the source
 material (the "Unreasonable Effectiveness of HTML" blog and protocontent's own
-foundation/spec HTML), change the install line to "add protocontent to your
-coding agent," and enumerate the artifacts as working material that lives outside
-source control. All six again kept the H1 and converged on the subhead below.
+foundation/spec HTML), changing the install line to "add protocontent to your
+coding agent," broadening from HTML-only to cover both Markdown and HTML, and
+replacing the "missing step" framing (which implied the user still had work to
+do) with an automatic / nothing-to-upload framing. All six kept the H1 and
+converged on the hero below.
 
 ### Primary hero
 
 > # Your agent makes a file. You get a link.
 >
-> The missing step after "make an HTML file." Add protocontent to your coding
-> agent, and whatever it builds — a rendered plan, an HTML prototype, a formatted
-> brief, a mockup, a diagram — is live at a link the instant it's created.
-> Outside version control. Never staged, never committed. Your laptop, your
-> phone, anywhere.
+> No upload. No deploy. It's just already there. Add protocontent to your coding
+> agent, and every artifact it makes — a plan, an HTML prototype, a formatted
+> brief, a mockup, a diagram — is live at a link the instant the file is written.
+> Markdown renders as a styled page, HTML as you built it — not raw text in a
+> diff viewer. Outside version control, never staged, never committed. Your
+> laptop, your phone, anywhere.
 
-Every phrase traces to source: "make an HTML file" and the missing-step framing
-come from the blog; "A rendered plan. An HTML prototype. A formatted brief. A
-mockup. A diagram." and "never staged, never committed" come from protocontent's
-own HTML.
+Notes on this version:
+- **Both formats, not HTML-only.** "Markdown renders as a styled page, HTML as
+  you built it — not raw text in a diff viewer." The subhead is anchored on
+  "make an artifact" (the blog's own "make an HTML artifact"; Simon Willison's
+  "creating an HTML artifact"), which covers `.md` and `.html` under one word.
+  The H1 keeps "file" — the word developers actually use — and lets the subhead
+  do the upgrading.
+- **No "missing step."** That phrasing implied the user still had a chore to do.
+  The opener now names the chores that vanish ("No upload. No deploy.") and the
+  relief ("It's just already there").
+- **Install line:** "add protocontent to your coding agent."
 
-### Subhead variant — names the gap out loud
+### Alternate opener (uses the product's own verb)
 
-For a version that quotes the blog's own admission of the leftover chore:
+Jason Fried's runner-up, if you'd rather lean on "publish":
 
-> The missing step after "make an HTML file": "as long as you upload the HTML
-> file, you can share the link easily" — so you do it by hand, every time. Add
-> protocontent to your coding agent, and whatever it builds — a rendered plan, an
-> HTML prototype, a formatted brief, a mockup, a diagram — is live at a link,
-> outside version control, the instant it's created.
+> You don't publish it. It's already published.
 
 ### A/B challenger (emotional H1)
 
