@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>protocontent — framing foundation (problem first)</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1a17; --muted:#6b6960;
+    --line:#e7e3d8; --accent:#c2410c; --accent-soft:#fff1e9;
+    --good:#15803d; --good-soft:#e7f6ec; --bad:#b91c1c;
+    --chip:#f1eee5; --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(40,30,10,.07);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg:#16140f; --panel:#1f1c16; --ink:#f1ede3; --muted:#a7a194;
+    --line:#332e24; --accent:#fb923c; --accent-soft:#2a1c11;
+    --good:#4ade80; --good-soft:#13241a; --bad:#f87171;
+    --chip:#272319; --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.62;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:780px;margin:0 auto;padding:56px 24px 110px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.85em;background:var(--chip);padding:.12em .42em;border-radius:5px;border:1px solid var(--line)}
+  em{font-style:italic}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:38px;line-height:1.05;letter-spacing:-.03em;margin:.18em 0 .2em;font-weight:850}
+  .lede{font-size:18px;color:var(--muted);max-width:62ch;margin:0}
+
+  .banner{margin:22px 0 0;background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:0 12px 12px 0;padding:14px 18px;font-size:15px}
+  .banner b{color:var(--accent)}
+
+  section{margin-top:54px}
+  .num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.04em}
+  h2{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:2px 0 14px;line-height:1.16}
+  h3{font-size:16px;font-weight:700;margin:24px 0 6px}
+  p{margin:0 0 14px}.muted{color:var(--muted)}
+
+  .key{font-size:clamp(20px,3.4vw,26px);font-weight:820;letter-spacing:-.02em;line-height:1.25;margin:6px 0 18px}
+  .key .x{color:var(--muted)} .key .hit{color:var(--accent)}
+
+  .one{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);font-size:16px}
+  .one .t{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700;margin:0 0 6px}
+
+  .rows{margin:18px 0;display:grid;gap:9px}
+  .r{display:grid;grid-template-columns:150px 1fr;gap:15px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px}
+  @media(max-width:560px){.r{grid-template-columns:1fr;gap:5px}}
+  .r .w{font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center}
+  .r .w .dot{width:7px;height:7px;border-radius:50%;background:var(--bad);flex:0 0 auto}
+  .r .g{font-size:14.5px;color:var(--muted)}.r .g b{color:var(--ink);font-weight:600}
+
+  ul.clean{margin:0 0 14px;padding:0;list-style:none}
+  ul.clean li{position:relative;padding:7px 0 7px 24px;border-top:1px solid var(--line);font-size:15px}
+  ul.clean li:first-child{border-top:none}
+  ul.clean li::before{content:"›";position:absolute;left:4px;top:7px;color:var(--accent);font-weight:800}
+  ul.clean li b{font-weight:650}
+
+  table.t{width:100%;border-collapse:collapse;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:8px 0}
+  .t th,.t td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  .t th{background:var(--chip);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+  .t tr:last-child td{border-bottom:none}.t td b{font-weight:650}
+  .scroll{overflow-x:auto}
+
+  .callout{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:16px 20px;margin:14px 0;font-size:17px}
+  .callout b{color:var(--accent)}
+
+  .nono{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.nono{grid-template-columns:1fr}}
+  .nono .pr{display:flex;gap:10px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:11px;font-size:14.5px}
+  .nono .n{color:var(--bad);font-weight:800;flex:0 0 auto}
+
+  footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+  .tt{position:fixed;top:16px;right:18px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-family:var(--sans)}
+  .tt:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<button class="tt" onclick="toggleTheme()" id="ttbtn">◐ Dark</button>
+<div class="wrap">
+
+  <div class="eyebrow">protocontent · framing foundation</div>
+  <h1>The groundwork — problem first</h1>
+  <p class="lede">Everything we'd want settled <em>before</em> writing a single tagline: the problem said
+    plainly and at length, who has it, when it bites, what people do today, what the thing actually is, and
+    the distinctions we keep almost losing. Pulled together from the whole conversation.</p>
+  <div class="banner"><b>No tagline here, on purpose.</b> This is the foundation to review and edit. The
+    line comes <em>after</em> this is right.</div>
+
+  <!-- 1. THE PROBLEM -->
+  <section>
+    <p class="num">01 — THE PROBLEM</p>
+    <h2>Said plainly, then said precisely</h2>
+
+    <div class="one"><p class="t">In one sentence</p>
+      <p style="margin:0">The most powerful way to work with a coding agent — having it make things you
+      <em>look at and react to</em> — silently breaks the moment that work leaves your machine: you can read
+      the source, but you can't see the rendered thing.</p></div>
+
+    <h3>The setup: a real way of working</h3>
+    <p>The way to get the most out of a coding agent is to have it make things you can <b>look at and react
+      to</b>, not walls of text. A rendered plan. An HTML prototype. A formatted brief. A mockup. A diagram.
+      Agents are good at this now — "HTML is all you need" is a genuine, productive practice, not a gimmick.
+      You think faster when you're reacting to a <em>thing</em> than to a paragraph describing it.</p>
+
+    <h3>Where it works: exactly one situation</h3>
+    <p>This loop is magic when it's <b>you, alone, at your own machine</b> — where <code>localhost</code> and
+      your editor's preview are right there. Open the file, look, react, iterate. No friction.</p>
+
+    <h3>Where it breaks: the moment the work has to travel</h3>
+    <ul class="clean">
+      <li>Your agent is running <b>in the cloud</b> — a remote dev box, a background agent — and there's no <code>localhost</code> you can reach.</li>
+      <li>Your <b>review is on your phone</b> — you tap the link the agent gave you and get a dead <code>localhost:5173</code>, or a wall of raw HTML.</li>
+      <li>The <b>next step belongs to someone else</b> — a teammate, or the next agent — and all you can hand them is a diff or a screenshot.</li>
+    </ul>
+
+    <h3>The pain underneath all of it</h3>
+    <p class="key"><span class="x">You can see the </span><span class="hit">code</span><span class="x"> of what your agent made.<br>You just can't see the </span><span class="hit">thing</span><span class="x">.</span></p>
+    <div class="rows">
+      <div class="r"><div class="w"><span class="dot"></span>A diff</div><div class="g"><b>Source you can read, not view.</b> You're staring at HTML tags and Markdown syntax — never the rendered page.</div></div>
+      <div class="r"><div class="w"><span class="dot"></span>Markdown, remotely</div><div class="g"><b>Raw text.</b> No formatted viewer on the web or a phone — it arrives unrendered.</div></div>
+      <div class="r"><div class="w"><span class="dot"></span>An HTML plan</div><div class="g"><b>No way to open it.</b> The whole "HTML is all you need" technique falls apart when you can't load the file.</div></div>
+      <div class="r"><div class="w"><span class="dot"></span>On a cloud box</div><div class="g"><b>Out of reach, then gone.</b> Anything not in the diff is stranded on the machine that made it — and lost when the session ends.</div></div>
+    </div>
+    <p>So the richest part of working with an agent — the look-at-it-and-react loop — quietly stops working
+      the instant you're not sitting at the machine that made it.</p>
+
+    <div class="callout"><b>The one-line wedge we keep coming back to:</b><br>
+      "Local preview works great — until the work isn't local."</div>
+  </section>
+
+  <!-- 2. WHAT IT IS NOT (the critical distinction) -->
+  <section>
+    <p class="num">02 — THE DISTINCTION WE KEEP LOSING</p>
+    <h2>This is not your product. It's the work <em>around</em> the code.</h2>
+    <p>The single thing the framing keeps dropping: the stuff we're talking about is <b>not your software</b>.
+      It's the working material the agent makes <em>on the way to</em> the code — plans, prototypes, briefs,
+      mockups, specs, diagrams, explorations. It was never meant to be committed, deployed, or handed off as a
+      deliverable.</p>
+    <p>Think of the interim boards and clickable prototypes you keep in <b>Figma</b> and never hand to a
+      developer — they're how you get to the design, and it's fine for them to be disposable. Agents make
+      exactly this kind of throwaway exploration, constantly, and have no canvas for it.</p>
+    <div class="callout"><b>Your repo holds the product.</b> This is everything the agent makes to build it.
+      That's <em>why</em> none of the existing homes fit — they're all built for source or for shipping.</div>
+    <p class="muted" style="font-size:14.5px">Why this matters for copy: "preview" begs the question
+      <em>preview of what?</em> — and the honest, differentiating answer is "the stuff that isn't your code."
+      If we don't say that, we get mistaken for a deploy tool or a pastebin.</p>
+  </section>
+
+  <!-- 3. WHO + WHEN -->
+  <section>
+    <p class="num">03 — WHO HAS IT, AND WHEN IT BITES</p>
+    <h2>The audience is defined by a moment, not a job title</h2>
+    <p>It bites the instant agent work has to leave the machine that made it:</p>
+    <ul class="clean">
+      <li><b>Cloud / background agents</b> — the agent runs somewhere you're not.</li>
+      <li><b>Mobile / away-from-desk review</b> — checking the work from your phone.</li>
+      <li><b>Remote dev boxes &amp; web-based agents</b> — SSH, containers, Claude Code on the web.</li>
+      <li><b>Async collaboration</b> — handing agent output to a teammate.</li>
+      <li><b>Multi-agent workflows</b> — one agent's artifact is the next agent's input.</li>
+      <li><b>"HTML is all you need" practitioners</b> — they generate the most look-at-able artifacts, so they feel this most acutely.</li>
+    </ul>
+    <p class="muted" style="font-size:14.5px"><b>Honest scoping:</b> if you work purely solo, locally, and
+      never share, local preview is genuinely fine. We're not for that moment — and saying so keeps us from
+      overclaiming.</p>
+  </section>
+
+  <!-- 4. WHY IT MATTERS -->
+  <section>
+    <p class="num">04 — WHY IT MATTERS</p>
+    <h2>The cost of leaving it broken</h2>
+    <ul class="clean">
+      <li>The <b>best way of working with agents silently degrades</b> the moment you go remote, mobile, or multi-agent — so people quietly fall back to walls of text.</li>
+      <li>You make <b>worse decisions</b> reviewing a screenshot or a diff than the real, interactive thing.</li>
+      <li><b>Work is lost</b> when ephemeral sessions and sandboxes are reclaimed.</li>
+      <li><b>Handoff friction</b> slows exactly the workflows that are growing fastest — async and multi-agent.</li>
+    </ul>
+  </section>
+
+  <!-- 5. ALTERNATIVES -->
+  <section>
+    <p class="num">05 — WHAT PEOPLE DO TODAY</p>
+    <h2>The alternatives, and why each falls short</h2>
+    <div class="scroll"><table class="t">
+      <tr><th>Today's move</th><th>Why it falls short</th></tr>
+      <tr><td><b>Commit it to the repo</b></td><td>It's throwaway — pollutes git history with things never meant to be source.</td></tr>
+      <tr><td><b>localhost / local preview</b></td><td>Dies the instant you leave the machine; invisible from a phone or a cloud box.</td></tr>
+      <tr><td><b>Screenshot / paste in chat</b></td><td>Static and lossy — you can't click or interact, and it isn't the real artifact.</td></tr>
+      <tr><td><b>Read the PR diff</b></td><td>Source, not rendered. You can read it; you can't view the thing it describes.</td></tr>
+      <tr><td><b>Deploy to Vercel/Netlify</b></td><td>Heavyweight and built for shipping products — config, permanence, ends up in the repo. Wrong tool for scratch.</td></tr>
+      <tr><td><b>A vendor's artifact panel</b></td><td>Locked to one tool; doesn't travel across agents or become a stable, shareable URL.</td></tr>
+    </table></div>
+    <p class="muted" style="font-size:14.5px">The gap: there's no <em>lightweight, shareable, throwaway</em>
+      home for the work between the prompt and the product.</p>
+  </section>
+
+  <!-- 6. WHAT IT IS -->
+  <section>
+    <p class="num">06 — WHAT IT ACTUALLY IS</p>
+    <h2>The thing itself, plainly</h2>
+    <p>protocontent gives <b>every artifact a coding agent makes a live, shareable URL</b> the instant it's
+      created — so the working material is viewable, shareable, and ready to hand off from anywhere, on any
+      device, across any agent. Each session also gets <b>one live page</b> that updates as the agent works.
+      Artifacts are <b>sandboxed</b> (isolated from your stuff), <b>ephemeral by default</b> (they expire;
+      keep the ones you want), and <b>never in your repo</b>.</p>
+    <p>Said as a role: it's <b>the place the agent's working material shows up</b> so you can see it, react to
+      it, and pass it on — the canvas the look-at-and-react loop needs once you're not at the machine.</p>
+  </section>
+
+  <!-- 7. NUANCES TO PRESERVE -->
+  <section>
+    <p class="num">07 — NUANCES TO PRESERVE WHEN WE WRITE THE LINE</p>
+    <h2>The things the copy must not drop</h2>
+    <ul class="clean">
+      <li><b>Working material, not the product.</b> The repo holds the product; this holds the stuff on the way to it.</li>
+      <li><b>Answer "preview of what?"</b> — name the non-code artifacts, in the line itself.</li>
+      <li><b>It's a way of working</b> ("look at what it makes, don't read what it types") that protocontent unlocks beyond the local desk.</li>
+      <li><b>Signal the "HTML-plans" practice</b> — speak to people who already work this way.</li>
+      <li><b>Name the wedge:</b> the value appears when the work isn't local.</li>
+      <li><b>Don't overclaim.</b> The honest boundary is "when work leaves your machine."</li>
+      <li><b>Pain + category together.</b> "Scratchpad" is a great noun for <em>what it is</em> but undersells the <em>problem</em>; the chosen line has to make the pain land too.</li>
+    </ul>
+  </section>
+
+  <!-- 8. NON-GOALS -->
+  <section>
+    <p class="num">08 — WHAT IT IS NOT</p>
+    <h2>Non-goals (so the framing stays honest)</h2>
+    <div class="nono">
+      <div class="pr"><span class="n">✗</span><span><b>Not a deploy/hosting platform</b> for finished products.</span></div>
+      <div class="pr"><span class="n">✗</span><span><b>Not git, a CMS, or an archive</b> — ephemeral by default.</span></div>
+      <div class="pr"><span class="n">✗</span><span><b>Not a single-vendor panel</b> — it works across agents.</span></div>
+      <div class="pr"><span class="n">✗</span><span><b>Not "publish HTML"</b> — that's a mechanism, not the point.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    protocontent · framing foundation · the pre-work, for review &amp; edit. Tagline comes next.
+    Earlier explorations: <a href="https://2atpij97hgu3.protocontent.app/voices-2">voices</a> ·
+    <a href="https://2atpij97hgu3.protocontent.app/hero">sharpened hero</a> ·
+    <a href="https://2atpij97hgu3.protocontent.app/framing-riff">riff</a>.
+  </footer>
+</div>
+<script>
+  function toggleTheme(){
+    const r=document.documentElement, dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('ttbtn').textContent=dark?'◐ Dark':'◑ Light';
+  }
+</script>
+</body>
+</html>
