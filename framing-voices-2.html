@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>protocontent — four voices (round 2)</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1a17; --muted:#6b6960;
+    --line:#e7e3d8; --accent:#c2410c; --chip:#f1eee5;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(40,30,10,.07);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    --zhuo:#0d9488; --zhuo-soft:#e6f6f4;
+    --ellis:#d6336c; --ellis-soft:#fff0f5;
+    --ive:#52525b; --ive-soft:#f4f4f5;
+    --jobs:#1d4ed8; --jobs-soft:#eef2ff;
+  }
+  [data-theme="dark"]{
+    --bg:#16140f; --panel:#1f1c16; --ink:#f1ede3; --muted:#a7a194;
+    --line:#332e24; --accent:#fb923c; --chip:#272319;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+    --zhuo:#5eead4; --zhuo-soft:#0e2422;
+    --ellis:#f783ac; --ellis-soft:#2a1620;
+    --ive:#d4d4d8; --ive-soft:#26231c;
+    --jobs:#93b4ff; --jobs-soft:#1a1d2e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:16.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:56px 22px 96px}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(30px,6vw,42px);line-height:1.05;letter-spacing:-.03em;margin:.2em 0 .22em;font-weight:850}
+  .lede{font-size:18px;color:var(--muted);max-width:60ch;margin:0}
+  .lede b{color:var(--ink);font-weight:650}
+  .wedge{margin:18px 0 0;font-size:15px;font-style:italic;color:var(--accent)}
+
+  .deck{display:grid;gap:18px;margin-top:36px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 24px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+  .card.zhuo{--c:var(--zhuo);--cs:var(--zhuo-soft)}
+  .card.ellis{--c:var(--ellis);--cs:var(--ellis-soft)}
+  .card.ive{--c:var(--ive);--cs:var(--ive-soft)}
+  .card.jobs{--c:var(--jobs);--cs:var(--jobs-soft)}
+  .who{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .who .name{font-size:13px;font-weight:800;color:var(--c)}
+  .who .vibe{font-size:12px;color:var(--muted)}
+  .tag{font-size:clamp(20px,3.5vw,26px);font-weight:820;letter-spacing:-.02em;line-height:1.2;margin:0 0 12px}
+  .sub{font-size:16px;color:var(--ink);margin:0;line-height:1.56}
+  .sub .pc{color:var(--c);font-weight:700}
+  .sig{margin:16px 0 0;font-size:14px;font-style:italic;color:var(--muted);background:var(--cs);border-radius:10px;padding:10px 14px;display:inline-block}
+
+  .note{margin-top:34px;font-size:14.5px;color:var(--muted);background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+  .note b{color:var(--ink)}
+  .note ul{margin:8px 0 0;padding-left:18px}.note li{margin:4px 0}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  .tt{position:fixed;top:14px;right:16px;z-index:50;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow);font-family:var(--sans)}
+</style>
+</head>
+<body>
+<button class="tt" onclick="toggleTheme()" id="ttbtn">◐ Dark</button>
+<div class="wrap">
+
+  <div class="eyebrow">protocontent · framing voices · round 2</div>
+  <h1>Four more voices</h1>
+  <p class="lede">Same wedge, four writers. The fix this round: the line has to answer
+    <b>preview of <em>what?</em></b> — and the answer is the stuff that <b>isn't your code</b>: prototypes,
+    plans, briefs, mockups, specs.</p>
+  <p class="wedge">"Local preview works great — until the work isn't local."</p>
+
+  <div class="deck">
+
+    <div class="card zhuo">
+      <div class="who"><span class="name">Julie Zhuo</span><span class="vibe">thoughtful · human · how we work</span></div>
+      <p class="tag">The work that happens <em>before</em> the product — now shareable.</p>
+      <p class="sub">Most of the real work happens before anything ships — the prototypes, the specs, the
+        briefs, the diagrams. Your coding agent is making all of it. The only problem: none of it was easy
+        to share until the moment it left your machine. <span class="pc">protocontent</span> gives every
+        artifact a live URL the instant it's created, so the work can move as fast as the work does.</p>
+      <p class="sig">"The artifacts were always the work. Now they move as fast as it does."</p>
+    </div>
+
+    <div class="card ellis">
+      <div class="who"><span class="name">Ellis Hamburger</span><span class="vibe">narrative · warm · the human moment</span></div>
+      <p class="tag">Your agent built something. Now anyone can see it.</p>
+      <p class="sub">Your agent just finished something — a prototype, a spec, a mockup, a plan. But it's
+        stuck on a machine you're not sitting at. <span class="pc">protocontent</span> gives every artifact
+        a live URL the instant it's created, so the work your agent makes on the way to the product is
+        already shareable before you've even asked.</p>
+      <p class="sig">"The artifacts were always the work. Now they have somewhere to live."</p>
+    </div>
+
+    <div class="card ive">
+      <div class="who"><span class="name">Jony Ive</span><span class="vibe">craft · intention · reduction</span></div>
+      <p class="tag">The work between the work — instantly shareable.</p>
+      <p class="sub">We thought carefully about what gets lost when work leaves a single machine. The
+        prototypes, the plans, the briefs and mockups — the artifacts that surround the code, that carry
+        the intention of the work. They need to travel. <span class="pc">protocontent</span> gives each one
+        a live URL the moment it exists, so the work is simply <em>there</em>. For whoever needs it, wherever
+        they are.</p>
+      <p class="sig">"The artifact was always the idea. Now it can go anywhere."</p>
+    </div>
+
+    <div class="card jobs">
+      <div class="who"><span class="name">Steve Jobs</span><span class="vibe">contrast · inevitability · one image</span></div>
+      <p class="tag">Local preview stops at your machine. This doesn't.</p>
+      <p class="sub">Here's the problem. Your agent builds prototypes, plans, specs, mockups — all the real
+        working material — and then what? It lives on a machine. Yours, or a cloud server's. So you send a
+        screenshot. You describe it on a call. That's not a workflow — that's a bottleneck.
+        <span class="pc">protocontent</span> gives every artifact a live URL the instant your agent makes it.
+        One link. Anyone, anywhere, any device.</p>
+      <p class="sig">"One URL. The work ships itself."</p>
+    </div>
+
+  </div>
+
+  <div class="note"><b>Quick read:</b>
+    <ul>
+      <li><b>Zhuo</b> best answers <em>preview of what?</em> — "the work that happens before the product."</li>
+      <li><b>Jobs</b> best preserves the wedge — "local preview stops at your machine."</li>
+      <li><b>Ive's</b> "the work between the work" is the most quotable phrase — a tagline on its own.</li>
+      <li><b>Hamburger</b> is the warmest hook for a launch story.</li>
+    </ul>
+  </div>
+
+  <footer>
+    protocontent · framing voices round 2 · siblings:
+    <a href="https://2atpij97hgu3.protocontent.app/directions">round 1 (Altman/Bier/Rauch)</a> ·
+    <a href="https://2atpij97hgu3.protocontent.app/hero">sharpened hero</a>
+  </footer>
+</div>
+<script>
+  function toggleTheme(){
+    const r=document.documentElement, dark=r.getAttribute('data-theme')==='dark';
+    r.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('ttbtn').textContent=dark?'◐ Dark':'◑ Light';
+  }
+</script>
+</body>
+</html>
