@@ -57,7 +57,7 @@ export function renderLandingPage(): { html: string; csp: string } {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>protocontent — a cloud scratchpad for your agents</title>
-<meta name="description" content="Your coding agent already writes files. protocontent gives them a shareable, sandboxed URL — and a live page that shows everything a session makes, the moment it makes it.">
+<meta name="description" content="Your agent makes a file; you get a link. Add protocontent to your coding agent and every artifact it makes — plans, prototypes, briefs, mockups, diagrams — lands at a live URL the instant it's written. Rendered, shareable, and out of your repo.">
 ${FAVICON}
 <style>
 ${BRAND_BASE_CSS}
@@ -124,9 +124,9 @@ ${BRAND_BASE_CSS}
   <main>
     <div class="lockup">${MARK}<h1>protocontent</h1><span class="alpha">alpha</span></div>
 
-    <p class="tagline">A cloud scratchpad for your agents.</p>
-    <p class="lede">Your agent makes HTML; protocontent hands it back as a URL. Paste it into another session, share it with a teammate, or open it on your phone from a remote run — the link comes with you across desktops, worktrees, and machines.</p>
-    <p class="lede">The cloud HTML is all you need. It's at its best while your agents are generating, and while you're working with rich content.</p>
+    <p class="tagline">Your agent makes a file. You get a link.</p>
+    <p class="lede">The link's live before you'd think to make one. Add protocontent to your coding agent, and every artifact it makes — a plan, an HTML prototype, a formatted brief, a mockup, a diagram — lands at a link the instant the file is written.</p>
+    <p class="lede">Markdown renders as a styled page, HTML as you built it — not raw text in a diff viewer. Outside version control, never staged, never committed. Your laptop, your phone, anywhere.</p>
 
     <div class="examples">
       ${EXAMPLES.map(
