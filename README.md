@@ -2,7 +2,7 @@
 
 **Publish the HTML (and other files) your coding agent makes to a shareable, sandboxed URL — and watch a whole session's artifacts on one live page, from any device.**
 
-Your agent already writes files. protocontent is the same primitive — _write a file_ — except it lands at a URL instead of in your repo. It's the home for everything an agent produces that isn't meant to be committed: plans, prototypes, dashboards, screenshots, generated images. HTML first (it's the richest format), content-agnostic by design.
+Your agent already writes files. protocontent is the same primitive — _write a file_ — except it lands at a URL instead of in your repo. It's the home for everything an agent produces that isn't meant to be committed: plans, prototypes, dashboards, screenshots, generated images. HTML first (it's the richest format), content-agnostic by design. **Markdown (`.md`) files are rendered to a styled, readable page** instead of served as raw text.
 
 Built because [Thariq Shihipar's "The Unreasonable Effectiveness of HTML"](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html) nails _generate HTML_ but leaves "upload it somewhere and share the link" as a manual gap. **protocontent is that missing verb.**
 

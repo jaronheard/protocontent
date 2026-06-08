@@ -1,7 +1,8 @@
 # Sharing artifacts with protocontent
 
-When you build something a human would open in a browser — an HTML report, plan,
-dashboard, prototype, diagram, generated doc, screenshot, or a built static site
+When you build something a human would open in a browser — an HTML report, a
+Markdown doc (`.md`, rendered to a styled page), plan, dashboard, prototype,
+diagram, generated doc, screenshot, or a built static site
 — publish it with the **protocontent** MCP tools (`publish_html` for a file or
 inline content, `publish_folder` for a directory) and share the returned link.
 
