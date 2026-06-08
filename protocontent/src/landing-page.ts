@@ -56,7 +56,7 @@ export function renderLandingPage(): { html: string; csp: string } {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>protocontent — a cloud scratchpad for your agents</title>
+<title>protocontent — your agent makes a file, you get a link</title>
 <meta name="description" content="Your agent makes a file; you get a link. Add protocontent to your coding agent and every artifact it makes — plans, prototypes, briefs, mockups, diagrams — lands at a live URL the instant it's written. Rendered, shareable, and out of your repo.">
 ${FAVICON}
 <style>
