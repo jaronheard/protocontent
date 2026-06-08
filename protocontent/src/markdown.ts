@@ -16,8 +16,8 @@
 //
 // The parser is intentionally small and dependency-free — it covers the
 // CommonMark/GFM subset agents actually produce (headings, emphasis, code,
-// lists, blockquotes, tables, rules, links/images), not every edge of the
-// spec.
+// lists, blockquotes, tables, rules, links/images, reference-style links, and
+// footnotes), not every edge of the spec.
 
 import { BRAND_BASE_CSS, FAVICON } from "./brand";
 
@@ -110,6 +110,13 @@ body{padding:24px 16px 64px;}
 .md del{color:var(--ink-faint);}
 .md .task{list-style:none;margin-left:-1.4em;}
 .md .task input{margin-right:.5em;}
+.md sup.footnote-ref{font-size:.72em;line-height:0;white-space:nowrap;}
+.md sup.footnote-ref a{font-weight:600;}
+.md .footnotes{margin-top:2.6em;font-size:.9em;color:var(--ink-soft);}
+.md .footnotes hr{margin:0 0 1.2em;}
+.md .footnotes ol{padding-left:1.4em;}
+.md .footnotes li{margin:.4em 0;}
+.md .footnote-back{margin-left:.35em;font-weight:600;text-decoration:none;}
 `;
 
 // ---------------------------------------------------------------------------
@@ -121,12 +128,129 @@ export function renderMarkdown(source: string): string {
   // Strip a leading UTF-8 BOM (common from Windows editors) so the first line
   // isn't prefixed with U+FEFF — which would otherwise defeat the heading /
   // list / fence checks. Normalize CRLF/CR to LF as well.
-  const lines = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
-  return parseBlocks(lines, 0, lines.length).html;
+  // Reset per-render state, then lift link/footnote definitions out of the
+  // source before block parsing so references can resolve against them.
+  linkRefs = new Map();
+  footnoteDefs = new Map();
+  footnoteOrder = [];
+  footnoteRefCounts = new Map();
+  const rawLines = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
+  const lines = extractDefinitions(rawLines);
+  const body = parseBlocks(lines, 0, lines.length).html;
+  return body + renderFootnotes();
 }
 
 interface BlockResult {
   html: string;
+}
+
+interface LinkRef {
+  url: string;
+  title?: string;
+}
+
+// Per-render parse state for link reference definitions and footnotes. It's
+// safe to keep this at module scope: `renderMarkdown` runs synchronously to
+// completion within a single JS isolate (no `await`), so renders never
+// interleave. Each call resets all three before parsing.
+let linkRefs = new Map<string, LinkRef>();
+let footnoteDefs = new Map<string, string>();
+let footnoteOrder: string[] = []; // footnote ids, in order of first reference
+let footnoteRefCounts = new Map<string, number>(); // times each id is referenced
+
+/**
+ * Pull link reference definitions (`[label]: url "title"`) and footnote
+ * definitions (`[^id]: text`) out of the source and into the shared maps,
+ * returning the remaining lines for the block parser. Definitions inside fenced
+ * code blocks are left untouched so code samples render verbatim.
+ */
+function extractDefinitions(lines: string[]): string[] {
+  const out: string[] = [];
+  let fenceMarker: string | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Track fenced code regions so `[x]: …` lines inside code aren't stripped.
+    const fence = line.match(/^\s{0,3}(```+|~~~+)/);
+    if (fence) {
+      const marker = fence[1][0];
+      if (fenceMarker === null) fenceMarker = marker;
+      else if (fenceMarker === marker && /^\s{0,3}(```+|~~~+)\s*$/.test(line)) fenceMarker = null;
+      out.push(line);
+      continue;
+    }
+    if (fenceMarker !== null) {
+      out.push(line);
+      continue;
+    }
+
+    // Footnote definition: `[^id]: text`, with indented continuation lines.
+    // Checked before link definitions because `[^id]:` also matches as a label.
+    const fn = line.match(/^\s{0,3}\[\^([^\]]+)\]:\s?(.*)$/);
+    if (fn) {
+      const id = fn[1].trim();
+      const parts = [fn[2]];
+      while (i + 1 < lines.length && lines[i + 1].trim() !== "" && /^\s{2,}\S/.test(lines[i + 1])) {
+        parts.push(lines[i + 1].replace(/^\s+/, ""));
+        i++;
+      }
+      if (!footnoteDefs.has(id)) footnoteDefs.set(id, parts.join("\n").trim());
+      continue;
+    }
+
+    // Link reference definition: `[label]: url` with an optional title. The
+    // first char of the label can't be `^` (that's a footnote, handled above).
+    const ref = line.match(
+      /^\s{0,3}\[([^\]^][^\]]*)\]:\s*(\S+)(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$/,
+    );
+    if (ref) {
+      const label = normalizeLabel(ref[1]);
+      if (label && !linkRefs.has(label)) {
+        linkRefs.set(label, { url: ref[2], title: ref[3] ?? ref[4] ?? ref[5] });
+      }
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  return out;
+}
+
+/** Normalize a reference label for case/whitespace-insensitive matching. */
+function normalizeLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Sanitize a footnote id for safe use in `id`/`href` attributes. */
+function footnoteSlug(id: string): string {
+  return id.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "fn";
+}
+
+/**
+ * Render the collected footnote definitions as an ordered list at the foot of
+ * the document, numbered by order of first reference (GFM). Returns "" when no
+ * footnotes were referenced.
+ */
+function renderFootnotes(): string {
+  if (footnoteOrder.length === 0) return "";
+  // Snapshot the order: inline() below could, in pathological cases, reference
+  // further footnotes; we render only those known when the body finished.
+  const items = [...footnoteOrder].map((id) => {
+    const slug = footnoteSlug(id);
+    const body = inline(footnoteDefs.get(id) ?? "");
+    // One back-arrow per reference site; number them when there's more than one.
+    const count = footnoteRefCounts.get(id) ?? 1;
+    const backs: string[] = [];
+    for (let n = 1; n <= count; n++) {
+      const refId = n === 1 ? `fnref-${slug}` : `fnref-${slug}-${n}`;
+      const label = count === 1 ? "↩" : `↩<sup>${n}</sup>`;
+      backs.push(`<a href="#${refId}" class="footnote-back" aria-label="Back to content">${label}</a>`);
+    }
+    return `<li id="fn-${slug}">${body} ${backs.join(" ")}</li>`;
+  });
+  return `\n<section class="footnotes">\n<hr>\n<ol>\n${items.join("\n")}\n</ol>\n</section>`;
 }
 
 /** Parse the block-level structure of `lines[start..end)`. */
@@ -485,6 +609,29 @@ function inline(text: string): string {
     },
   );
 
+  // Footnote references: [^id] → superscript link, numbered by first use.
+  // Done before reference links so `[^id]` isn't mistaken for a shortcut ref.
+  work = work.replace(/\[\^([^\]]+)\]/g, (_m, rawId) => {
+    const id = rawId.trim();
+    if (!footnoteDefs.has(id)) return _m; // undefined footnote → literal text
+    let num = footnoteOrder.indexOf(id) + 1;
+    if (num === 0) num = footnoteOrder.push(id);
+    const slug = footnoteSlug(id);
+    // Each reference gets a unique anchor id so the footnote can link back to
+    // every one of its call sites (no duplicate ids when a note is reused).
+    const refCount = (footnoteRefCounts.get(id) ?? 0) + 1;
+    footnoteRefCounts.set(id, refCount);
+    const refId = refCount === 1 ? `fnref-${slug}` : `fnref-${slug}-${refCount}`;
+    return `<sup class="footnote-ref"><a href="#fn-${slug}" id="${refId}">${num}</a></sup>`;
+  });
+
+  // Full / collapsed reference links: [text][label] or [text][].
+  work = work.replace(/\[([^\]]+)\]\[([^\]]*)\]/g, (_m, text, label) =>
+    refLink(text, label.trim() === "" ? text : label) ?? _m,
+  );
+  // Shortcut reference links: [label] (only when it names a known definition).
+  work = work.replace(/\[([^\]]+)\]/g, (_m, label) => refLink(label, label) ?? _m);
+
   // Bare autolinks: <https://…>  (angle-bracketed; escaped to &lt;…&gt;)
   work = work.replace(/&lt;((?:https?|mailto):[^\s&]+)&gt;/g, (_m, url) => {
     const safe = safeUrl(url, false);
@@ -507,6 +654,20 @@ function inline(text: string): string {
   // Restore code spans.
   work = work.replace(/ C(\d+) /g, (_m, idx) => codes[Number(idx)]);
   return work;
+}
+
+/**
+ * Resolve a reference-style link to an `<a>`, or null if `label` names no known
+ * definition (or its URL is unsafe) — in which case the caller leaves the
+ * source literal. `text` is the already-escaped link content.
+ */
+function refLink(text: string, label: string): string | null {
+  const ref = linkRefs.get(normalizeLabel(label));
+  if (!ref) return null;
+  const safe = safeUrl(ref.url, false);
+  if (!safe) return null;
+  const t = ref.title ? ` title="${escapeAttr(ref.title)}"` : "";
+  return `<a href="${escapeAttr(safe)}"${t} rel="noopener noreferrer">${text}</a>`;
 }
 
 /**
