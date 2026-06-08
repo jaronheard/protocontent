@@ -15,5 +15,6 @@ inline content, `publish_folder` for a directory) and share the returned link.
 - **Don't publish** repo source code, secrets, or files meant to be committed.
 
 Install (Claude Code): `/plugin marketplace add jaronheard/protocontent` then
-`/plugin install protocontent@protocontent`. MCP-only:
-`claude mcp add protocontent npx -y protocontent`.
+`/plugin install protocontent@protocontent`. MCP-only: tell your agent
+*"add the protocontent MCP (`npx -y protocontent`) to this project's `.mcp.json`"*,
+or run `claude mcp add -s project protocontent -- npx -y protocontent`.
