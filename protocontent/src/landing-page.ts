@@ -1,7 +1,7 @@
 // Apex landing page (protocontent.com / protocontent.app).
 //
 // A deliberately tiny front door: the brand mark, one line of what this is, the
-// one command to add it to an agent, and two links. Same "calm aurora
+// one prompt to add it to an agent, and two links. Same "calm aurora
 // frosted-glass" language as the viewer-shell badge (see brand.ts), so the
 // marketing surface and the in-product chrome are visibly one thing.
 //
@@ -11,7 +11,8 @@
 
 import { BRAND_BASE_CSS, FAVICON, MARK } from "./brand";
 
-const INSTALL_CMD = "claude mcp add protocontent -- npx -y protocontent";
+const INSTALL_PROMPT =
+  "Add the protocontent MCP (npx -y protocontent) to this project's .mcp.json";
 const SOURCE_URL = "https://github.com/jaronheard/protocontent";
 const NPM_URL = "https://www.npmjs.com/package/protocontent";
 
@@ -96,9 +97,8 @@ ${BRAND_BASE_CSS}
 
   .install{padding:7px 7px 7px 16px;border-radius:14px;display:flex;align-items:center;gap:10px;
     max-width:520px;margin:0 auto 14px;text-align:left;}
-  .install code{flex:1;min-width:0;font-family:var(--mono);font-size:13px;color:var(--ink);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .install .prompt{color:var(--ink-faint);user-select:none;margin-right:8px;}
+  .install code{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink);}
+  .tell{font-size:12.5px;font-weight:750;letter-spacing:.01em;color:var(--ink-soft);margin:0 0 9px;}
   .copy{appearance:none;border:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;color:#063a30;
     padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;flex:none;
     background:linear-gradient(135deg, var(--aurora-3), var(--aurora-1) 55%, var(--aurora-2));
@@ -139,14 +139,15 @@ ${BRAND_BASE_CSS}
       ).join("")}
     </div>
 
+    <p class="tell">Tell your coding agent:</p>
     <div class="install glass">
-      <code><span class="prompt" aria-hidden="true">$</span><span id="cmd">${INSTALL_CMD}</span></code>
-      <button type="button" class="copy" id="copy" aria-label="Copy install command">
+      <code id="cmd">${INSTALL_PROMPT}</code>
+      <button type="button" class="copy" id="copy" aria-label="Copy prompt">
         <span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span>
         <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Copied</span>
       </button>
     </div>
-    <p class="install-hint">Any MCP agent works — or just add <code>npx -y protocontent</code> as a stdio MCP server.</p>
+    <p class="install-hint">Adds it to this project’s <code>.mcp.json</code>, so every session picks it up. Any MCP agent works.</p>
 
     <div class="links">
       <a class="btn" href="${SOURCE_URL}" target="_blank" rel="noopener">
@@ -166,7 +167,7 @@ ${BRAND_BASE_CSS}
 (function () {
   "use strict";
   var btn = document.getElementById('copy');
-  var cmd = ${jsonForScript(INSTALL_CMD)};
+  var cmd = ${jsonForScript(INSTALL_PROMPT)};
   if (!btn) return;
   var reset = null;
   btn.addEventListener('click', function () {

@@ -26,8 +26,17 @@ Tools: `publish_html`, `publish_folder`, `list`, `history`, `keep`, `unpublish`.
 
 ## Install (any MCP agent)
 
+Tell your coding agent:
+
+> Add the protocontent MCP (`npx -y protocontent`) to this project's `.mcp.json`
+
+That lands a project-scoped `.mcp.json` at the repo root. Commit it, and **every session that opens the repo gets the MCP** — your local agent, a teammate's checkout, and remote runs (e.g. Claude Code on the web) that clone the repo fresh. Per-machine MCP config doesn't travel; a committed `.mcp.json` does.
+
+Prefer to run it by hand?
+
 ```bash
-claude mcp add protocontent -- npx -y protocontent
+claude mcp add -s project protocontent -- npx -y protocontent   # this repo (committed, travels)
+claude mcp add protocontent -- npx -y protocontent              # just this machine
 ```
 
 …or add `npx -y protocontent` as a stdio MCP server in your agent's config. Zero config — it mints an anonymous project on first run and gives back a tappable link plus a live session URL.
