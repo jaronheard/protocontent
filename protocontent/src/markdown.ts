@@ -134,6 +134,7 @@ export function renderMarkdown(source: string): string {
   footnoteDefs = new Map();
   footnoteOrder = [];
   footnoteRefCounts = new Map();
+  footnoteSlugs = new Map();
   const rawLines = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
   const lines = extractDefinitions(rawLines);
   const body = parseBlocks(lines, 0, lines.length).html;
@@ -157,6 +158,25 @@ let linkRefs = new Map<string, LinkRef>();
 let footnoteDefs = new Map<string, string>();
 let footnoteOrder: string[] = []; // footnote ids, in order of first reference
 let footnoteRefCounts = new Map<string, number>(); // times each id is referenced
+let footnoteSlugs = new Map<string, string>(); // raw id → unique anchor slug
+
+/**
+ * Stable, collision-free anchor slug for a footnote id. Two distinct ids that
+ * slugify the same (e.g. `Foo`/`foo`, `a b`/`a-b`) get disambiguated so the
+ * emitted `fn-…`/`fnref-…` ids stay unique. Cached so the in-text reference and
+ * the footnote list item agree on the slug.
+ */
+function slugForFootnote(id: string): string {
+  const cached = footnoteSlugs.get(id);
+  if (cached) return cached;
+  const base = footnoteSlug(id);
+  let slug = base;
+  let n = 2;
+  const used = new Set(footnoteSlugs.values());
+  while (used.has(slug)) slug = `${base}-${n++}`;
+  footnoteSlugs.set(id, slug);
+  return slug;
+}
 
 /**
  * Pull link reference definitions (`[label]: url "title"`) and footnote
@@ -238,7 +258,7 @@ function renderFootnotes(): string {
   // Snapshot the order: inline() below could, in pathological cases, reference
   // further footnotes; we render only those known when the body finished.
   const items = [...footnoteOrder].map((id) => {
-    const slug = footnoteSlug(id);
+    const slug = slugForFootnote(id);
     const body = inline(footnoteDefs.get(id) ?? "");
     // One back-arrow per reference site; number them when there's more than one.
     const count = footnoteRefCounts.get(id) ?? 1;
@@ -616,7 +636,7 @@ function inline(text: string): string {
     if (!footnoteDefs.has(id)) return _m; // undefined footnote → literal text
     let num = footnoteOrder.indexOf(id) + 1;
     if (num === 0) num = footnoteOrder.push(id);
-    const slug = footnoteSlug(id);
+    const slug = slugForFootnote(id);
     // Each reference gets a unique anchor id so the footnote can link back to
     // every one of its call sites (no duplicate ids when a note is reused).
     const refCount = (footnoteRefCounts.get(id) ?? 0) + 1;
@@ -625,12 +645,20 @@ function inline(text: string): string {
     return `<sup class="footnote-ref"><a href="#fn-${slug}" id="${refId}">${num}</a></sup>`;
   });
 
+  // Reference-style images: ![alt][label], ![alt][], ![label]. Handled before
+  // reference links so the `[label]`/`[text][label]` patterns below don't claim
+  // an image's brackets (the `(?<!!)` guard keeps them off any that remain).
+  work = work.replace(/!\[([^\]]*)\]\[([^\]]*)\]/g, (_m, alt, label) =>
+    refImage(alt, label.trim() === "" ? alt : label) ?? _m,
+  );
+  work = work.replace(/!\[([^\]]+)\]/g, (_m, alt) => refImage(alt, alt) ?? _m);
+
   // Full / collapsed reference links: [text][label] or [text][].
-  work = work.replace(/\[([^\]]+)\]\[([^\]]*)\]/g, (_m, text, label) =>
+  work = work.replace(/(?<!!)\[([^\]]+)\]\[([^\]]*)\]/g, (_m, text, label) =>
     refLink(text, label.trim() === "" ? text : label) ?? _m,
   );
   // Shortcut reference links: [label] (only when it names a known definition).
-  work = work.replace(/\[([^\]]+)\]/g, (_m, label) => refLink(label, label) ?? _m);
+  work = work.replace(/(?<!!)\[([^\]]+)\]/g, (_m, label) => refLink(label, label) ?? _m);
 
   // Bare autolinks: <https://…>  (angle-bracketed; escaped to &lt;…&gt;)
   work = work.replace(/&lt;((?:https?|mailto):[^\s&]+)&gt;/g, (_m, url) => {
@@ -671,13 +699,32 @@ function refLink(text: string, label: string): string | null {
 }
 
 /**
+ * Resolve a reference-style image to an `<img>`, or null if `label` names no
+ * known definition (or its URL is unsafe). `alt` is the already-escaped alt
+ * text. Mirrors `refLink` but emits an image (and allows `data:image/…` URLs).
+ */
+function refImage(alt: string, label: string): string | null {
+  const ref = linkRefs.get(normalizeLabel(label));
+  if (!ref) return null;
+  const safe = safeUrl(ref.url, true);
+  if (!safe) return null;
+  const t = ref.title ? ` title="${escapeAttr(ref.title)}"` : "";
+  return `<img src="${escapeAttr(safe)}" alt="${escapeAttr(alt)}"${t}>`;
+}
+
+/**
  * Allow only safe URL schemes. Relative URLs (no scheme, or starting with `/`,
  * `#`, `./`, `../`) pass; absolute URLs must be http(s)/mailto/tel, or — for
  * images only — a `data:image/...`. Anything else (e.g. `javascript:`) is
  * rejected so the link/image is left as literal text.
  */
 function safeUrl(url: string, isImage: boolean): string | null {
-  const u = url.trim();
+  let u = url.trim();
+  // CommonMark angle-bracket URL form: `<https://…>`. Strip the wrapper so the
+  // scheme check below sees the real URL — otherwise a leading `<` makes it
+  // look schemeless ("relative") and slip through unfiltered, and the emitted
+  // `&lt;…&gt;` href gets re-matched and mangled by the autolink pass.
+  if (u.startsWith("<") && u.endsWith(">")) u = u.slice(1, -1).trim();
   if (u === "") return null;
   // Relative or fragment/anchor — safe.
   if (/^[#/.]/.test(u) || !/^[a-z][a-z0-9+.-]*:/i.test(u)) return u;
