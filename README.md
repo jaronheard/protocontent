@@ -1,6 +1,6 @@
 # protocontent
 
-**Publish the HTML (and other files) your coding agent makes to a shareable, sandboxed URL — and watch a whole session's artifacts on one live page, from any device.**
+**Your agent makes a file. You get a link.** Add protocontent to your coding agent, and every artifact it makes — a plan, an HTML prototype, a formatted brief, a mockup, a diagram — lands at a live, shareable, sandboxed URL the instant the file is written. Markdown renders as a styled page, HTML as you built it — not raw text in a diff viewer. Outside version control, never staged, never committed. Your laptop, your phone, anywhere.
 
 Your agent already writes files. protocontent is the same primitive — _write a file_ — except it lands at a URL instead of in your repo. It's the home for everything an agent produces that isn't meant to be committed: plans, prototypes, dashboards, screenshots, generated images. HTML first (it's the richest format), content-agnostic by design. **Markdown (`.md`) files are rendered to a styled, readable page** instead of served as raw text.
 
