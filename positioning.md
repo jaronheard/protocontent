@@ -72,11 +72,11 @@ converged on the hero below.
 
 > # Your agent makes a file. You get a link.
 >
-> No upload. No deploy. It's just already there. Add protocontent to your coding
-> agent, and every artifact it makes — a plan, an HTML prototype, a formatted
-> brief, a mockup, a diagram — is live at a link the instant the file is written.
-> Markdown renders as a styled page, HTML as you built it — not raw text in a
-> diff viewer. Outside version control, never staged, never committed. Your
+> The link's live before you'd think to make one. Add protocontent to your
+> coding agent, and every artifact it makes — a plan, an HTML prototype, a
+> formatted brief, a mockup, a diagram — lands at a link the instant the file is
+> written. Markdown renders as a styled page, HTML as you built it — not raw text
+> in a diff viewer. Outside version control, never staged, never committed. Your
 > laptop, your phone, anywhere.
 
 Notes on this version:
@@ -86,16 +86,19 @@ Notes on this version:
   "creating an HTML artifact"), which covers `.md` and `.html` under one word.
   The H1 keeps "file" — the word developers actually use — and lets the subhead
   do the upgrading.
-- **No "missing step."** That phrasing implied the user still had a chore to do.
-  The opener now names the chores that vanish ("No upload. No deploy.") and the
-  relief ("It's just already there").
+- **No "missing step," and no false "no upload."** "Missing step" implied the
+  user still had a chore; but the product genuinely does upload and publish under
+  the hood (its tool is `publish_html`), so claiming "no upload / no deploy"
+  would be dishonest. The opener instead conveys that it's automatic and instant
+  from the user's side — the link is live before you'd reach to make one — without
+  denying the real mechanics.
 - **Install line:** "add protocontent to your coding agent."
 
-### Alternate opener (uses the product's own verb)
+### Alternate opener (effortless, plain)
 
-Jason Fried's runner-up, if you'd rather lean on "publish":
+If you'd rather put the zero-work squarely on the reader:
 
-> You don't publish it. It's already published.
+> You don't lift a finger.
 
 ### A/B challenger (emotional H1)
 
