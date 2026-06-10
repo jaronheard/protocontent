@@ -5,7 +5,7 @@
 // diff on a phone, then as a live link with a rendered prototype (the "after"
 // window links to a real published demo) — three objection cards (private,
 // out of your repo, any MCP agent), and the install block with the one
-// command to copy. Same "calm aurora frosted-glass" language as the
+// prompt to copy. Same "calm aurora frosted-glass" language as the
 // viewer-shell badge (see brand.ts), so the marketing surface and the
 // in-product chrome are visibly one thing.
 //
@@ -18,8 +18,11 @@ import { BRAND_BASE_CSS, FAVICON, MARK } from "./brand";
 const SOURCE_URL = "https://github.com/jaronheard/protocontent";
 const NPM_URL = "https://www.npmjs.com/package/protocontent";
 
-/** The one command the install block shows and the copy button copies. */
-const INSTALL_CMD = "claude mcp add protocontent -- npx -y protocontent";
+/** The prompt the install block shows and the copy button copies. Paste it to
+ *  any coding agent; it lands in the project's .mcp.json so every session —
+ *  and any MCP agent — picks it up (see #22). */
+const INSTALL_PROMPT =
+  "Add the protocontent MCP (npx -y protocontent) to this project's .mcp.json";
 
 /** Real, live published artifact the hero's "after" card links to — the link
  *  line and the rendered window both open it. It IS the pitch. */
@@ -94,8 +97,7 @@ ${BRAND_BASE_CSS}
   .install-block{margin-top:32px;}
   .install-label{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 10px;}
   .install{padding:7px 7px 7px 16px;border-radius:14px;display:flex;align-items:center;gap:10px;max-width:520px;margin:0 auto 14px;text-align:left;}
-  .install code{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .install .prompt{color:var(--ink-faint);user-select:none;margin-right:8px;}
+  .install code{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink);}
   .copy{appearance:none;border:0;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;color:#063a30;padding:8px 15px;border-radius:10px;display:inline-flex;align-items:center;flex:none;background:linear-gradient(135deg, var(--aurora-3), var(--aurora-1) 55%, var(--aurora-2));box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 0 0 1px rgba(255,255,255,.3),0 2px 10px -3px rgba(40,210,180,.6);transition:transform .16s var(--ease),filter .16s ease;}
   .copy:hover{transform:translateY(-1px);filter:brightness(1.04);}
   .copy .label,.copy .ok{display:inline-flex;align-items:center;gap:7px;}
@@ -270,15 +272,15 @@ ${BRAND_BASE_CSS}
     </div>
   </div>
   <div class="install-block" id="install">
-    <p class="install-label">Install for Claude Code</p>
+    <p class="install-label">Tell your coding agent</p>
     <div class="install glass">
-      <code><span class="prompt" aria-hidden="true">$</span><span>${INSTALL_CMD}</span></code>
-      <button type="button" class="copy" id="copy" aria-label="Copy install command">
+      <code>${INSTALL_PROMPT}</code>
+      <button type="button" class="copy" id="copy" aria-label="Copy prompt">
         <span class="label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copy</span>
         <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Copied</span>
       </button>
     </div>
-    <p class="install-hint">Other agents: add <code>npx -y protocontent</code> as a stdio MCP server.</p>
+    <p class="install-hint">Adds it to this project&rsquo;s <code>.mcp.json</code>, so every session picks it up. Any MCP agent works.</p>
     <div class="links">
       <a class="btn" href="${SOURCE_URL}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.9c-2.78.62-3.37-1.2-3.37-1.2-.46-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05a9.36 9.36 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9l-.01 2.81c0 .27.18.6.69.49A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>Source</a>
       <a class="btn" href="${NPM_URL}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 6h20v11h-9v2H8v-2H2V6Zm2 2v7h2V9h2v6h2V8H4Zm9 0v9h2v-2h3V8h-5Zm2 2h1v3h-1v-3Z"/></svg>npm</a>
@@ -290,7 +292,7 @@ ${BRAND_BASE_CSS}
 (function () {
   "use strict";
   var btn = document.getElementById('copy');
-  var cmd = ${jsonForScript(INSTALL_CMD)};
+  var cmd = ${jsonForScript(INSTALL_PROMPT)};
   if (!btn) return;
   var reset = null;
   btn.addEventListener('click', function () {
