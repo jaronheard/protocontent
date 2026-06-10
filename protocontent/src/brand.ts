@@ -140,7 +140,8 @@ body{
 a{color:#0c7a73;text-decoration:none;}
 a:hover{text-decoration:underline;}
 
-:focus-visible{outline:2px solid var(--aurora-1);outline-offset:2px;border-radius:10px;}
+/* dark teal, not aurora — the ring must clear 3:1 against the near-white field */
+:focus-visible{outline:2px solid #0c7a73;outline-offset:2px;border-radius:10px;}
 
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important;transition:none !important;}

@@ -29,6 +29,28 @@ const INSTALL_PROMPT =
 const DEMO_URL =
   "https://teal-ridge-jsbmhggy5ageorz375zdcx.protocontent.app/card-redesign";
 
+/** More live artifacts, shown as agent chat messages below the install block.
+ *  Experimental section ("test" tag) — keep, grow, or cut based on how it
+ *  lands. Each `say` paraphrases what the artifact actually contains; each
+ *  `url` must stay live (these are real published spaces). */
+const EXAMPLES = [
+  {
+    say: "Reviewed PR #247. Two blocking issues before merge: refresh tokens aren’t rotated on use, and the expiry check reads the wrong clock.",
+    name: "pr-review",
+    url: "https://teal-ridge-jsbmhggy5ageorz375zdcx.protocontent.app/pr-review",
+  },
+  {
+    say: "Wrote up the implementation plan for offline draft sync. Local persistence, a sync queue, and conflict handling on reconnect.",
+    name: "offline-sync-plan",
+    url: "https://misty-fjord-ben9ae5si7o4j8zmk2k8hz.protocontent.app/offline-sync-plan",
+  },
+  {
+    say: "Pulled the Aurora design language into one page so you can see the palette, type scale, and components together.",
+    name: "design-exploration",
+    url: "https://opal-creek-bnvzgzxa26s4b4374rmlus.protocontent.app/design-exploration",
+  },
+];
+
 export function renderLandingPage(): { html: string; csp: string } {
   const nonce = generateNonce();
   const csp = [
@@ -48,6 +70,12 @@ export function renderLandingPage(): { html: string; csp: string } {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>protocontent — your coding agent has something to show you</title>
 <meta name="description" content="Your agent runs in the cloud. You're on your phone. When it writes a Markdown plan or an HTML prototype, protocontent gives you a live link to open it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="protocontent">
+<meta property="og:url" content="https://protocontent.com/">
+<meta property="og:title" content="protocontent — your coding agent has something to show you">
+<meta property="og:description" content="Your agent runs in the cloud. You're on your phone. When it writes a Markdown plan or an HTML prototype, protocontent gives you a live link to open it.">
+<meta name="twitter:card" content="summary">
 ${FAVICON}
 <style>
 ${BRAND_BASE_CSS}
@@ -63,7 +91,7 @@ ${BRAND_BASE_CSS}
   .topbar .brand{display:inline-flex;align-items:center;gap:9px;}
   .topbar .brand .mark{--mark:26px;}
   .topbar .brand .name{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
-  .topbar .brand .alpha{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#0a5249;padding:2px 6px;border-radius:999px;line-height:1;background:linear-gradient(135deg,rgba(155,232,255,.7),rgba(122,240,163,.62));box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset;}
+  .topbar .brand .alpha{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap;color:#0a5249;padding:2px 6px;border-radius:999px;line-height:1;background:linear-gradient(135deg,rgba(155,232,255,.7),rgba(122,240,163,.62));box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset;}
   .topnav{display:flex;align-items:center;gap:5px;}
   .topnav a{font-size:13px;font-weight:600;color:var(--ink-soft);padding:6px 11px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:background .16s ease,color .16s ease;}
   .topnav a:hover{background:rgba(255,255,255,.55);color:var(--ink);text-decoration:none;}
@@ -91,7 +119,9 @@ ${BRAND_BASE_CSS}
   .card .ic svg{width:15px;height:15px;display:block;}
   .card h3{margin:0 0 4px;font-size:13.5px;font-weight:750;letter-spacing:-.01em;color:var(--ink);line-height:1.3;}
   .card p{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink-soft);}
-  @media (max-width:699px){.cards{grid-template-columns:1fr;max-width:480px;}.card{display:grid;grid-template-columns:30px 1fr;column-gap:12px;}.card .ic{grid-row:1 / 3;margin:2px 0 0;}.card h3{grid-column:2;align-self:center;}.card p{grid-column:2;}}
+  /* 699.98 (not 699) so fractional viewport widths can't fall between this
+     and the hero's min-width:700px and mix mobile/desktop layouts */
+  @media (max-width:699.98px){.cards{grid-template-columns:1fr;max-width:480px;}.card{display:grid;grid-template-columns:30px 1fr;column-gap:12px;}.card .ic{grid-row:1 / 3;margin:2px 0 0;}.card h3{grid-column:2;align-self:center;}.card p{grid-column:2;}}
 
   /* install block */
   .install-block{margin-top:32px;}
@@ -108,6 +138,18 @@ ${BRAND_BASE_CSS}
   .install-hint{font-size:12.5px;color:var(--ink-faint);margin:0;text-align:center;}
   .install-hint code{font-family:var(--mono);font-size:11.5px;background:rgba(255,255,255,.5);padding:1px 6px;border-radius:6px;box-shadow:0 0 0 1px var(--edge);}
   .links{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:24px;}
+
+  /* examples strip — each item reads like the hero's "after" card: the agent's
+     message in serif, then the link line. Experimental ("test" tag). */
+  .more{margin-top:44px;}
+  .more-label{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 12px;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .more-label .tag-test{font-size:9px;letter-spacing:.09em;color:#0a5249;padding:2px 6px;border-radius:999px;line-height:1;white-space:nowrap;background:linear-gradient(135deg,rgba(155,232,255,.7),rgba(122,240,163,.62));box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset;}
+  .more-list{display:flex;flex-direction:column;gap:10px;max-width:560px;margin:0 auto;}
+  .more-item{display:block;border-radius:14px;padding:14px 16px 13px;text-align:left;text-decoration:none;transition:transform .16s var(--ease),box-shadow .16s var(--ease);}
+  .more-item:hover{text-decoration:none;transform:translateY(-2px);box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.7) inset,0 22px 44px -22px rgba(20,60,58,.5),0 4px 12px -5px rgba(20,60,58,.24);}
+  .more-item .m-say{margin:0 0 5px;font-family:var(--serif);font-size:14px;line-height:1.45;color:var(--ink);}
+  .more-item .m-link{font-family:var(--serif);font-size:13.5px;color:#0c7a73;}
+  .more-item:hover .m-link{text-decoration:underline;}
   footer{margin-top:40px;font-size:12px;color:var(--ink-faint);text-align:center;}
   footer a{color:var(--ink-soft);}
 
@@ -169,6 +211,12 @@ ${BRAND_BASE_CSS}
   box-shadow:0 0 0 1px var(--edge),0 1px 0 rgba(255,255,255,.8) inset,0 8px 18px -9px rgba(20,60,58,.5);}
 #e1 .e1-conn svg{width:18px;height:18px;display:block;}
 #e1 .e1-conn .a-right{display:none;}
+/* stacked (phone): cap the before-card's diff window so the deliberately
+   unreadable part doesn't push the "after" payoff a full screen below the
+   fold — the fade mask already implies a longer file */
+@media (max-width:699.98px){
+  #e1 .e1-before .win{aspect-ratio:auto;height:168px;}
+}
 /* desktop: side by side */
 @media (min-width:700px){
   #e1 .e1-wrap{flex-direction:row;align-items:stretch;}
@@ -286,6 +334,17 @@ ${BRAND_BASE_CSS}
       <a class="btn" href="${NPM_URL}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 6h20v11h-9v2H8v-2H2V6Zm2 2v7h2V9h2v6h2V8H4Zm9 0v9h2v-2h3V8h-5Zm2 2h1v3h-1v-3Z"/></svg>npm</a>
     </div>
   </div>
+  <section class="more" aria-labelledby="more-label">
+    <p class="more-label" id="more-label">More from real chats <span class="tag-test">test</span></p>
+    <div class="more-list">
+${EXAMPLES.map(
+  (ex) => `      <a class="more-item glass" href="${ex.url}" target="_blank" rel="noopener">
+        <p class="m-say">${ex.say}</p>
+        <span class="m-link">${ex.name}&nbsp;&#8599;</span>
+      </a>`,
+).join("\n")}
+    </div>
+  </section>
   <footer>Made for coding agents · MIT · <a href="${SOURCE_URL}" target="_blank" rel="noopener">jaronheard/protocontent</a></footer>
 </main>
 <script nonce="${nonce}">
