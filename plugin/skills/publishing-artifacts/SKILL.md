@@ -23,6 +23,11 @@ screenshots, a built static site (a folder).
 **Don't publish:** repo source code, anything meant to be committed, secrets, or
 large binaries. When unsure, publish a *rendered report* view, not raw code.
 
+**Private repos:** artifact links are public. When the working repo is not
+itself the thing being published (you're writing a plan or report *about* a
+private codebase), ask before the first proactive publish, and never include
+source excerpts, schemas, or production prompts in the published page.
+
 ## How
 
 1. **Publish** with `protocontent:publish_html` (a file or inline content) or
