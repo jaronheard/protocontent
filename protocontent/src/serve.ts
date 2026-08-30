@@ -7,7 +7,8 @@
 //   GET /              -> first-party live session index page
 //   GET /__list        -> JSON list of artifacts (for the index to refetch)
 //   GET /__live        -> WebSocket upgrade, routed to the Space DO
-//   GET /:name         -> serve the artifact entry (or single file)
+//   GET /:name         -> single file entry; folder artifacts 301 -> /:name/
+//   GET /:name/        -> serve a folder artifact's entry document
 //   GET /:name/*assets -> serve a file relative to the artifact
 //
 // Untrusted artifact responses carry a CSP `sandbox` (opaque origin -> no
@@ -15,7 +16,14 @@
 // The first-party index page is NOT sandboxed (it needs same-origin WS/fetch).
 
 import type { Env } from "./types";
-import { getSpace, listArtifacts, artifactUpdatedAt, resolveFile, getArtifact } from "./db";
+import {
+  getSpace,
+  listArtifacts,
+  artifactUpdatedAt,
+  resolveFile,
+  getArtifact,
+  countFiles,
+} from "./db";
 import { renderSpacePage, type SpacePageArtifact } from "./space-page";
 import { renderViewerShell } from "./viewer-shell";
 import { isMarkdownContentType, renderMarkdownDocument } from "./markdown";
@@ -163,10 +171,34 @@ export async function handleContent(
   // Everything else — `?raw=1`, iframe/embed dests, sub-path assets, bots and
   // unfurlers (no Sec-Fetch-Dest), HEAD, old browsers — gets the unchanged raw
   // bytes with the original sandbox CSP, byte-for-byte. The framed raw entry is
-  // at the same base path (`/:name?raw=1`), so relative-asset resolution is
+  // at the same base path (`entryPath?raw=1`), so relative-asset resolution is
   // preserved.
   const isRaw = url.searchParams.get("raw") === "1";
   const isEntry = relUnderArtifact === "";
+
+  // --- Canonical entry path: folder artifacts live at `/:name/` -------------
+  // At the slash-less URL the entry document's base directory is the SITE ROOT,
+  // so its relative asset URLs (`assets/x.png`) resolve to `/assets/x.png` and
+  // 404 — and the sandbox CSP's `base-uri 'none'` (deliberate: an injected
+  // <base> must not be able to retarget the document) rules out the <base>-tag
+  // escape hatch. Redirect to the trailing-slash form, like any static host.
+  // Single-file artifacts have no relative assets and keep their `/:name` URL.
+  const hasTrailingSlash = path.endsWith("/");
+  if (isEntry && !hasTrailingSlash) {
+    const fileCount = await countFiles(env, artifact.id, version);
+    if (fileCount > 1) {
+      return new Response(null, {
+        status: 301,
+        headers: {
+          location: `/${encodeURIComponent(name)}/${url.search}`,
+          "x-robots-tag": "noindex",
+          "cache-control": "public, max-age=60",
+        },
+      });
+    }
+  }
+  const entryPath = `/${encodeURIComponent(name)}${hasTrailingSlash ? "/" : ""}`;
+
   const wantsShell =
     isEntry &&
     !isRaw &&
@@ -179,6 +211,7 @@ export async function handleContent(
       version,
       host: url.host,
       k: url.searchParams.get("k"),
+      entryPath,
     });
     return new Response(html, {
       headers: {
@@ -204,7 +237,9 @@ export async function handleContent(
   // `sandbox` directive gives the document an opaque origin (no cookies/storage),
   // which is our PSL-free inter-artifact isolation. Cookies are also never set on
   // artifact responses (we build headers from scratch — nothing copied from R2).
-  headers.set("content-security-policy", artifactCsp(`https://${url.host}`));
+  // url.origin (not a hardcoded https:// prefix): on plain-http local dev the
+  // scheme must match or frame-ancestors/img-src refuse everything.
+  headers.set("content-security-policy", artifactCsp(url.origin));
   headers.set("x-content-type-options", "nosniff");
   headers.set("x-robots-tag", "noindex");
   headers.set("cache-control", "public, max-age=60");
@@ -247,7 +282,8 @@ async function buildArtifactList(env: Env, spaceId: string): Promise<SpacePageAr
   for (const a of rows) {
     if (isExpired(a.expires_at)) continue;
     const updatedAt = (await artifactUpdatedAt(env, a.id)) || a.created_at;
-    out.push({ name: a.name, url: `/${a.name}`, updatedAt });
+    const files = await countFiles(env, a.id, a.latest_version);
+    out.push({ name: a.name, url: `/${a.name}${files > 1 ? "/" : ""}`, updatedAt });
   }
   // Most recently updated first.
   out.sort((x, y) => y.updatedAt - x.updatedAt);

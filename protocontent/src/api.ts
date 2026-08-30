@@ -19,6 +19,7 @@ import {
   unpublishArtifact,
   keepArtifact,
   artifactUpdatedAt,
+  countFiles,
   spaceOrigin,
   setSpaceBlocked,
   insertReport,
@@ -455,12 +456,16 @@ async function handleList(request: Request, env: Env, spaceId: string): Promise<
   const space = await requireOwnedSpace(env, spaceId, projectId);
   const rows = await listArtifacts(env, spaceId);
   const origin = spaceOrigin(spaceId);
-  const artifacts = rows.map((a) => ({
-    name: a.name,
-    url: `${origin}/${a.name}`,
-    expiresAt: a.expires_at,
-    version: a.latest_version,
-  }));
+  const artifacts = [];
+  for (const a of rows) {
+    const files = await countFiles(env, a.id, a.latest_version);
+    artifacts.push({
+      name: a.name,
+      url: `${origin}/${a.name}${files > 1 ? "/" : ""}`,
+      expiresAt: a.expires_at,
+      version: a.latest_version,
+    });
+  }
   const spaceUrl = space.index_token ? `${origin}/?k=${space.index_token}` : `${origin}/`;
   return json({ artifacts, spaceUrl });
 }

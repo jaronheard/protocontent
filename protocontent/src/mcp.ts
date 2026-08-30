@@ -30,6 +30,7 @@ import {
   unpublishArtifact,
   keepArtifact,
   artifactUpdatedAt,
+  countFiles,
   spaceOrigin,
 } from "./db";
 import { bytesToBase64, slugify } from "./util";
@@ -145,9 +146,10 @@ export class ProtoMcpAgent extends McpAgent<Env, McpState> {
       const items = [];
       for (const a of rows) {
         const updatedAt = (await artifactUpdatedAt(this.env, a.id)) || a.created_at;
+        const files = await countFiles(this.env, a.id, a.latest_version);
         items.push({
           name: a.name,
-          url: `${origin}/${a.name}`,
+          url: `${origin}/${a.name}${files > 1 ? "/" : ""}`,
           version: a.latest_version,
           expiresAt: a.expires_at,
           updatedAt,

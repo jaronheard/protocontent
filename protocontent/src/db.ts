@@ -252,6 +252,20 @@ export async function listArtifacts(env: Env, spaceId: string): Promise<Artifact
   return res.results ?? [];
 }
 
+/** Number of files in one version of an artifact (1 = single file, >1 = folder). */
+export async function countFiles(
+  env: Env,
+  artifactId: string,
+  version: number,
+): Promise<number> {
+  const row = await env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM files WHERE artifact_id = ? AND version = ?`,
+  )
+    .bind(artifactId, version)
+    .first<{ count: number }>();
+  return row?.count ?? 0;
+}
+
 /** Most recent file timestamp for an artifact (used for "updatedAt"). */
 export async function artifactUpdatedAt(env: Env, artifactId: string): Promise<number> {
   const row = await env.DB.prepare(
@@ -399,7 +413,13 @@ export async function publishArtifact(
   }
   await env.DB.batch(statements);
 
-  const url = `${spaceOrigin(spaceId)}/${name}`;
+  // Folder artifacts are canonically served at `/:name/` (trailing slash) so the
+  // entry document's relative asset URLs resolve under the folder, not the site
+  // root. Single files stay at `/:name`. serve.ts redirects the slash-less form.
+  const url =
+    input.files.length > 1
+      ? `${spaceOrigin(spaceId)}/${name}/`
+      : `${spaceOrigin(spaceId)}/${name}`;
   const spaceUrl = `${spaceOrigin(spaceId)}/`;
   return {
     artifactId,
