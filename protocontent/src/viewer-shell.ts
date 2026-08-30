@@ -20,6 +20,8 @@ export interface ViewerShellOptions {
   version: number;
   host: string;
   k: string | null;
+  /** Canonical entry path (`/name` or `/name/` for folder artifacts), URL-encoded. */
+  entryPath: string;
 }
 
 /**
@@ -36,11 +38,12 @@ export function renderViewerShell(opts: ViewerShellOptions): { html: string; csp
   const safeName = htmlEscape(opts.name);
   const safeSpace = htmlEscape(opts.spaceId);
 
-  // The framed raw entry lives at the SAME base path (`/:name`) so the
-  // artifact's relative-asset resolution is preserved; only the query differs.
+  // The framed raw entry lives at the SAME base path as the shell (the
+  // canonical entryPath — `/name/` for folders) so the artifact's
+  // relative-asset resolution is preserved; only the query differs.
   // Pin the version only if the shell URL pinned one (version may equal the
   // current latest — passing it is harmless and keeps the frame stable).
-  let frameSrc = "/" + encodeURIComponent(opts.name) + "?raw=1";
+  let frameSrc = opts.entryPath + "?raw=1";
   if (Number.isFinite(opts.version) && opts.version > 0) {
     frameSrc += "&v=" + encodeURIComponent(String(opts.version));
   }
@@ -51,6 +54,7 @@ export function renderViewerShell(opts: ViewerShellOptions): { html: string; csp
   const config = {
     SPACE: opts.spaceId,
     NAME: opts.name,
+    ENTRY_PATH: opts.entryPath,
     VERSION: Number.isFinite(opts.version) ? opts.version : 0,
     HOST: opts.host,
     URL_K: opts.k,
@@ -348,7 +352,7 @@ export function renderViewerShell(opts: ViewerShellOptions): { html: string; csp
   function reloadFrame(version) {
     var frame = document.getElementById("pc-frame");
     if (frame) {
-      var src = "/" + encodeURIComponent(NAME) + "?raw=1" + (version ? ("&v=" + encodeURIComponent(String(version))) : "");
+      var src = (CFG.ENTRY_PATH || "/" + encodeURIComponent(NAME)) + "?raw=1" + (version ? ("&v=" + encodeURIComponent(String(version))) : "");
       frame.setAttribute("src", src);
     }
     if (typeof version === "number") VERSION = version;
